@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AVSAR API Contracts",
+  "version": "1.0.0",
+  "description": "Agreed JSON request and response schemas across AVSAR services",
+  "definitions": {
+    "EligibilityStatus": {
+      "type": "string",
+      "enum": [
+        "ELIGIBLE",
+        "POTENTIALLY_ELIGIBLE",
+        "NOT_ELIGIBLE",
+        "CANNOT_DETERMINE"
+      ],
+      "description": "Four externally visible eligibility statuses required by AVSAR API contract"
+    },
+    "EligibilityEvaluationResponse": {
+      "type": "object",
+      "required": [
+        "scheme_id",
+        "status",
+        "api_status",
+        "is_eligible",
+        "score",
+        "summary",
+        "reasons",
+        "missing_fields",
+        "has_missing_student_info",
+        "has_missing_opportunity_criteria"
+      ],
+      "properties": {
+        "scheme_id": { "type": "string" },
+        "scheme_title": { "type": "string" },
+        "status": { "type": "string" },
+        "api_status": { "$ref": "#/definitions/EligibilityStatus" },
+        "is_eligible": { "type": "boolean" },
+        "score": { "type": "number", "minimum": 0, "maximum": 100 },
+        "summary": { "type": "string" },
+        "reasons": { "type": "array", "items": { "type": "string" } },
+        "missing_fields": { "type": "array", "items": { "type": "string" } },
+        "has_missing_student_info": { "type": "boolean" },
+        "has_missing_opportunity_criteria": { "type": "boolean" },
+        "passed_criteria": { "type": "array", "items": { "type": "object" } },
+        "failed_criteria": { "type": "array", "items": { "type": "object" } },
+        "missing_criteria": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "OpportunityResponse": {
+      "type": "object",
+      "required": ["id", "title", "category", "source_url", "deadline"],
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string", "enum": ["scholarship", "internship", "job", "government_scheme", "grant"] },
+        "provider": { "type": "string" },
+        "source_url": { "type": "string", "format": "uri" },
+        "deadline": { "type": "string", "format": "date-time" },
+        "criteria": { "type": "array", "items": { "type": "object" } },
+        "trust_score": { "type": "number", "minimum": 0, "maximum": 100 },
+        "is_verified": { "type": "boolean" }
+      }
+    },
+    "ProfileResponse": {
+      "type": "object",
+      "required": ["id", "email", "name"],
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "dob": { "type": "string", "format": "date" },
+        "gender": { "type": "string" },
+        "category": { "type": "string" },
+        "domicile_state": { "type": "string" },
+        "annual_income": { "type": "number" },
+        "education": { "type": "object" },
+        "skills": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "ResumeAnalysisResponse": {
+      "type": "object",
+      "required": ["parsed_skills", "experience_years", "readiness_score", "recommendations"],
+      "properties": {
+        "parsed_skills": { "type": "array", "items": { "type": "string" } },
+        "experience_years": { "type": "number" },
+        "education": { "type": "array", "items": { "type": "object" } },
+        "readiness_score": { "type": "number", "minimum": 0, "maximum": 100 },
+        "recommendations": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "TrustReportResponse": {
+      "type": "object",
+      "required": ["opportunity_id", "trust_score", "status", "signals"],
+      "properties": {
+        "opportunity_id": { "type": "string" },
+        "trust_score": { "type": "number", "minimum": 0, "maximum": 100 },
+        "status": { "type": "string", "enum": ["VERIFIED", "SUSPICIOUS", "UNVERIFIED"] },
+        "signals": { "type": "array", "items": { "type": "string" } },
+        "official_domain_match": { "type": "boolean" }
+      }
+    }
+  }
+}
