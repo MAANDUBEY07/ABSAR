@@ -1,8 +1,10 @@
-/**
- * useAuth Hook
- * Custom React hook for accessing current authenticated candidate session.
- */
+"use client";
+
+import { useContext } from "react";
+import { AuthContext } from "@/providers/AuthProvider";
 
 export function useAuth() {
-  return { user: null, loading: false };
+  const auth = useContext(AuthContext);
+  if (!auth) throw new Error("useAuth must be used inside AuthProvider.");
+  return auth;
 }

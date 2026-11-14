@@ -17,11 +17,11 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
   const pathname = usePathname();
   return <>
     {open && <button className="mobile-overlay" onClick={onClose} aria-label="Close navigation" />}
-    <aside className={`sidebar ${open ? "sidebar-open" : ""}`}>
+    <aside id="workspace-sidebar" className={`sidebar ${open ? "sidebar-open" : ""}`} aria-label="Workspace navigation">
       <div className="sidebar-brand"><Link href="/dashboard" className="brand-lockup"><span className="sidebar-logo">avsar<ArrowUpRight size={14} /></span><small>YOUR OPPORTUNITY DESK</small></Link></div>
       <div className="sidebar-label">YOUR WORKSPACE</div>
       <nav className="side-nav">
-        {items.map(({ label, href, Icon }) => <Link key={href} href={href} onClick={onClose} className={`side-link ${pathname === href || (href === "/opportunities" && pathname.startsWith("/opportunities/")) ? "selected" : ""}`}><Icon size={18} /><span>{label}</span></Link>)}
+        {items.map(({ label, href, Icon }) => { const selected = pathname === href || (href === "/opportunities" && pathname.startsWith("/opportunities/")); return <Link key={href} href={href} onClick={onClose} className={`side-link ${selected ? "selected" : ""}`} aria-current={selected ? "page" : undefined}><Icon size={18} aria-hidden="true" /><span>{label}</span></Link>; })}
       </nav>
       <div className="sidebar-bottom">
         <div className="help-card"><div className="help-symbol"><ShieldCheck size={18} /></div><strong>Stay safe while applying</strong><p>Check the original source before sharing documents or paying application fees.</p><a href="https://www.cybercrime.gov.in/" target="_blank" rel="noreferrer">Visit cybercrime portal <ArrowUpRight size={12} /></a></div>

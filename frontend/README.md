@@ -1,29 +1,31 @@
 # AVSAR Frontend
 
-Next.js frontend for the AVSAR student opportunity assistant.
+Next.js 14 App Router frontend for the AVSAR student opportunity platform. The existing light green visual system is retained.
 
 ## Run locally
 
-```bash
+```powershell
 npm install
-Copy-Item .env.local.example .env.local   # PowerShell; create this file if it does not exist
+Copy-Item .env.local.example .env.local
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3000. Start the FastAPI backend separately and set `NEXT_PUBLIC_API_BASE_URL` to its `/api/v1` base URL.
 
-## Current visual direction
+## Authentication
 
-AVSAR now uses a clean student-opportunity marketplace layout, taking structural cues from the supplied AVSAR discovery reference and Unstop's category-first browsing experience.
+The frontend reads `/api/v1/auth/config` before initializing authentication. When the backend uses Supabase, configure `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`; the Supabase browser client persists and refreshes its session. The anon key is public configuration. Never put a Supabase service-role key or another private secret in a `NEXT_PUBLIC_` variable.
 
-- Light warm-white canvas with deep forest-green text.
-- Green, mint, sage, amber and peach accents. No blue or purple palette.
-- Public discovery homepage with top navigation, hero search, category tiles, recommended opportunity cards and a four-step product explainer.
-- Workspace uses a pale-sage sidebar, compact search header, rounded information cards and responsive page layouts.
-- Opportunity categories, eligibility/trust indicators, saved opportunities, resume upload, application tracking, deadline calendar and profile screens remain in place.
+When the backend explicitly reports its local development auth provider, the login and signup pages use the backend's development-only `/api/auth/login` and `/api/auth/signup` routes. That short-lived token is held in `sessionStorage`. Hosted environments must use the configured external provider.
 
-## Backend connection
+## Backend-connected workflows
 
-The existing API service layer, Supabase helper, auth hook and FastAPI endpoint paths are retained. Configure `.env.local` using `.env.local.example`. Keep `NEXT_PUBLIC_USE_MOCK_DATA=true` during frontend-only work; switch it to `false` once the FastAPI endpoints and Supabase project are ready.
+- Opportunity search, canonical category filters, pagination, details, and saving to the application tracker.
+- Personalized recommendations, eligibility checks, profile editing, deadline events, notifications, and source risk-signal review.
+- PDF/DOCX resume upload, job polling, extracted skill claims, and opportunity-specific skill comparison.
 
-The opportunity records currently shown in mock mode are fictional demo records. They are not live listings or verified opportunities.
+Requests use a centralized client that attaches the authenticated bearer token, parses `data`/`meta` envelopes, reports API errors, and applies request timeouts. No demo listings are used as a substitute for backend data.
+
+The backend currently exposes application lifecycle states such as `SAVED`, `DRAFT`, `READY_FOR_REVIEW`, `SUBMITTED`, `ASSESSMENT`, `INTERVIEW`, and `OFFER`. The UI maps these to student-facing labels. It only sends status transitions accepted by the current backend; the six-state product vocabulary is not a direct match to the present API schema.
+
+Opportunity mode filtering uses the authenticated recommendations endpoint, which supports `remote=true/false`. Hybrid mode is not exposed because the current backend schema does not define it. The backend calendar API does not provide ICS export.

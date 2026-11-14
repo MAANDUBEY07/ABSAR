@@ -1,24 +1,93 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowRight, ArrowUpRight, Search, BriefcaseBusiness, GraduationCap,
-  Trophy, FlaskConical, Handshake, Laptop, Landmark, Lightbulb, Rocket, Gift,
-  ShieldCheck, CalendarCheck, FileText, Target, MapPin, Clock3, Sparkles
+  ArrowRight, ArrowUpRight, BookmarkCheck, BriefcaseBusiness, CalendarDays,
+  FileText, FlaskConical, GraduationCap, Handshake, Laptop, Layers3,
+  Search, ShieldCheck, Sparkles, Trophy, UsersRound, Zap,
 } from "lucide-react";
-import { DEMO_OPPORTUNITIES, CATEGORY_LABELS } from "@/utils/constants";
+import { CATEGORY_LABELS, OPPORTUNITY_CATEGORIES } from "@/utils/constants";
+import { api } from "@/services/api";
+import { useAuth } from "@/hooks/useAuth";
+import ThemeToggle from "@/components/ThemeToggle";
 
-const categories = [
-  { title: "Scholarships", subtitle: "Financial support", icon: GraduationCap, color: "mint", filter: "SCHOLARSHIP" },
-  { title: "Internships", subtitle: "Build real experience", icon: BriefcaseBusiness, color: "peach", filter: "INTERNSHIP" },
-  { title: "Jobs & more", subtitle: "Find your next step", icon: Laptop, color: "sand", filter: "OTHER" },
-  { title: "Government schemes", subtitle: "Public programmes", icon: Landmark, color: "sage", filter: "OTHER" },
-  { title: "Fellowships", subtitle: "Learn and contribute", icon: Handshake, color: "rose", filter: "FELLOWSHIP" },
-  { title: "Apprenticeships", subtitle: "Learn on the job", icon: Laptop, color: "sand", filter: "INTERNSHIP" },
-  { title: "Hackathons", subtitle: "Build with a team", icon: Trophy, color: "yellow", filter: "HACKATHON" },
-  { title: "Coding challenges", subtitle: "Test your skills", icon: Lightbulb, color: "mint", filter: "HACKATHON" },
-  { title: "Research", subtitle: "Explore new ideas", icon: FlaskConical, color: "sage", filter: "RESEARCH" },
-  { title: "Startup challenges", subtitle: "Turn ideas into action", icon: Rocket, color: "peach", filter: "OTHER" },
-  { title: "Grants", subtitle: "Support for projects", icon: Gift, color: "sand", filter: "SCHOLARSHIP" },
+const featuredCategories = [
+  { title: "Scholarships", category: "scholarship", Icon: GraduationCap, tone: "peach" },
+  { title: "Internships", category: "internship", Icon: BriefcaseBusiness, tone: "mint" },
+  { title: "Jobs", category: "job", Icon: Laptop, tone: "sand" },
+  { title: "Hackathons", category: "hackathon", Icon: Layers3, tone: "cream" },
+  { title: "Competitions", category: "coding_competition", Icon: Trophy, tone: "rose" },
+  { title: "Fellowships", category: "fellowship", Icon: UsersRound, tone: "mint" },
+  { title: "Research", query: "research", Icon: FlaskConical, tone: "cream" },
+  { title: "Apprenticeships", category: "apprenticeship", Icon: Handshake, tone: "peach" },
 ];
+
+const features = [
+  { title: "Personalized Discovery", text: "Find opportunities that match your profile and interests.", Icon: Zap },
+  { title: "Eligibility Check", text: "Know what fits and what information you may still need.", Icon: ShieldCheck },
+  { title: "Resume Analyzer", text: "Review resume skill claims and compare them with requirements.", Icon: FileText },
+  { title: "Deadline Tracker", text: "Keep saved opportunities and important dates together.", Icon: CalendarDays },
+];
+
+const steps = [
+  ["01", "Discover", "Explore student opportunities in one searchable place."],
+  ["02", "Check eligibility", "Understand requirements and see what information is missing."],
+  ["03", "Analyse your resume", "Compare your skills with the opportunity requirements."],
+  ["04", "Track applications", "Save opportunities and keep upcoming deadlines in view."],
+];
+
+function StudentIllustration() {
+  return (
+    <svg className="student-illustration" viewBox="0 0 650 430" role="img" aria-labelledby="student-art-title student-art-description">
+      <title id="student-art-title">Student exploring opportunities on a laptop</title>
+      <desc id="student-art-description">A student in an orange hoodie works on a laptop surrounded by scholarship, internship and hackathon cards.</desc>
+      <defs>
+        <linearGradient id="hero-glow" x1="0" x2="1" y1="0" y2="1"><stop stopColor="var(--art-glow)" /><stop offset="1" stopColor="var(--art-glow-end)" /></linearGradient>
+        <linearGradient id="hoodie" x1="0" x2="1" y1="0" y2="1"><stop stopColor="#ff9a18" /><stop offset="1" stopColor="#f56b00" /></linearGradient>
+        <filter id="card-shadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="12" stdDeviation="13" floodColor="#000" floodOpacity=".13" /></filter>
+      </defs>
+      <path d="M78 352c32-74 72-125 138-129 48-3 43-82 108-84 58-2 59 56 115 59 63 3 81-43 136-17 46 21 31 113 75 171H78Z" fill="url(#hero-glow)" />
+      <circle cx="451" cy="201" r="157" fill="none" stroke="var(--art-ring)" strokeWidth="2" />
+      <circle cx="451" cy="201" r="125" fill="none" stroke="var(--art-ring)" strokeDasharray="4 10" />
+      <g className="illustration-opportunity" filter="url(#card-shadow)" transform="rotate(-7 163 130)">
+        <rect x="39" y="89" width="208" height="67" rx="16" fill="var(--art-card)" stroke="var(--art-card-border)" strokeWidth="2" />
+        <path d="M63 112h28v18H63zM59 111l18-10 18 10M71 130v9m14-9v9" fill="none" stroke="#ff7900" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        <text x="105" y="129" className="illustration-label">Scholarships</text>
+      </g>
+      <g className="illustration-opportunity" filter="url(#card-shadow)" transform="rotate(-4 145 220)">
+        <rect x="20" y="183" width="220" height="66" rx="16" fill="var(--art-card)" stroke="var(--art-card-border)" strokeWidth="2" />
+        <rect x="48" y="201" width="28" height="22" rx="3" fill="none" stroke="#ff7900" strokeWidth="4" /><path d="M56 201v-6h12v6m-20 8h28" fill="none" stroke="#ff7900" strokeWidth="4" strokeLinecap="round" />
+        <text x="91" y="222" className="illustration-label">Internships</text>
+      </g>
+      <g className="illustration-opportunity" filter="url(#card-shadow)" transform="rotate(-2 155 307)">
+        <rect x="42" y="277" width="196" height="62" rx="16" fill="var(--art-card)" stroke="var(--art-card-border)" strokeWidth="2" />
+        <path d="m68 296-11 11 11 11m18-22 11 11-11 11m-4-25-8 28" fill="none" stroke="#ff7900" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        <text x="111" y="315" className="illustration-label">Hackathons</text>
+      </g>
+      <g className="student-figure">
+        <path d="M328 425c11-84 35-116 92-126h87c63 11 92 54 105 126Z" fill="url(#hoodie)" stroke="#121212" strokeWidth="7" strokeLinejoin="round" />
+        <path d="m402 301 60 79 61-80-29-23h-68z" fill="#fff2db" stroke="#121212" strokeWidth="6" strokeLinejoin="round" />
+        <path d="M411 179c2-62 43-102 99-94 47 7 71 43 62 102l-12 45c-10 33-42 53-73 51-34-2-63-29-70-65z" fill="#ffe0b6" stroke="#121212" strokeWidth="7" />
+        <path d="M405 157c-6-43 15-75 41-91 34-20 93-14 122 14 23 22 26 51 13 77l-10-22-14 10-2-28c-21 18-53 25-84 24-26-1-47 8-66 24z" fill="#171717" stroke="#121212" strokeWidth="7" strokeLinejoin="round" />
+        <path d="M415 139c-22-14-30-37-18-54 5 19 20 24 32 28m142 18c20-10 31-27 25-46 19 23 14 53-6 71" fill="#171717" stroke="#121212" strokeWidth="7" strokeLinecap="round" />
+        <g fill="none" stroke="#171717" strokeWidth="5"><circle cx="450" cy="184" r="21"/><circle cx="518" cy="184" r="21"/><path d="M471 182h26m-63-4h-18m104 0h18"/></g>
+        <circle cx="453" cy="184" r="4" fill="#171717"/><circle cx="516" cy="184" r="4" fill="#171717" />
+        <path d="M473 212q13 11 26-1m-33 22q12 12 26 4" fill="none" stroke="#171717" strokeWidth="4" strokeLinecap="round" />
+        <path d="M395 302q-42 20-57 70l-18 53h57l34-65m119-58q49 10 68 64l19 59h-57l-34-66" fill="url(#hoodie)" stroke="#121212" strokeWidth="7" strokeLinejoin="round" />
+        <path d="M402 329q54 67 111 4" fill="none" stroke="#c95600" strokeWidth="5" strokeLinecap="round" />
+        <path d="M395 350q39 50 66 52m76-59q-34 37-56 50" fill="none" stroke="#171717" strokeWidth="6" strokeLinecap="round" />
+      </g>
+      <g filter="url(#card-shadow)">
+        <path d="m300 292 217 9 34 117-224-2z" fill="#262626" stroke="#111" strokeWidth="8" strokeLinejoin="round" />
+        <path d="m327 309 174 7 23 81-176-1z" fill="#111" />
+        <path d="m380 338 17-27h18l-16 27zm24 0 17-27h18l-16 27zm0 4h18l-16 26h-18z" fill="#ff7900" />
+        <path d="M312 417h244l-18 13H329z" fill="#555" stroke="#111" strokeWidth="5" strokeLinejoin="round" />
+      </g>
+      <path d="m599 92 10-24m7 41 23-13m-22 34 27-3" fill="none" stroke="#ff7900" strokeWidth="6" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 const formatDate = (value) => {
   if (!value) return "Deadline not listed";
@@ -27,104 +96,74 @@ const formatDate = (value) => {
 };
 
 export default function LandingPage() {
-  const featured = DEMO_OPPORTUNITIES.slice(0, 4);
+  const { user, loading: authLoading } = useAuth();
+  const [featured, setFeatured] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    if (authLoading) return undefined;
+    if (!user) { setLoading(false); return undefined; }
+    let active = true;
+    api.opportunities({ limit: 4, offset: 0 })
+      .then((result) => { if (active) setFeatured(Array.isArray(result.items) ? result.items : []); })
+      .catch((error) => { if (active) setLoadError(error.message); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [authLoading, user]);
+
   return (
     <div className="public-site">
       <header className="public-header">
         <Link href="/" className="public-brand" aria-label="AVSAR home">
-          <span>avsar</span><ArrowUpRight className="brand-arrow" size={17} strokeWidth={3} />
+          <span className="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M12 3h10l16 27-5 8H22L6 11z"/><path d="M12 3 6 11h18l-5 8H2m16 0 9 15m-9-15h18"/></svg></span>
+          <span className="brand-name">avsar</span><span className="brand-divider"/><span className="brand-tagline">The Student Opportunity Platform</span>
         </Link>
         <nav className="public-nav" aria-label="Main navigation">
-          <Link className="active" href="/opportunities">Discover</Link>
-          <Link href="/applications">My Applications</Link>
-          <Link href="/resume">Resume Analyzer</Link>
-          <Link href="/dashboard">My Dashboard</Link>
+          <a href="#categories">Explore</a><a href="#features">Features</a><a href="#how-it-works">How it works</a><a href="#about">About</a>
         </nav>
-        <div className="public-actions">
-          <Link href="/opportunities" className="header-icon-link" aria-label="Search opportunities"><Search size={19} /></Link>
-          <Link href="/login" className="header-login">Log in</Link>
-          <Link href="/signup" className="header-cta">Get started <ArrowRight size={15} /></Link>
-        </div>
+        <div className="public-actions"><ThemeToggle /><Link href="/login" className="header-login">Log in</Link><Link href="/signup" className="header-cta">Get started <ArrowRight size={16} /></Link></div>
       </header>
 
       <main>
-        <section className="discovery-hero">
-          <div className="discovery-hero-inner">
-            <div className="hero-copy-new">
-              <span className="platform-pill"><span className="pill-dot" /> THE STUDENT OPPORTUNITY PLATFORM</span>
-              <h1>Your next opportunity<br /><span>is just a search away.</span></h1>
-              <p className="hero-description">Discover scholarships, internships, hackathons, fellowships and more — all in one place, with the details you need to apply confidently.</p>
-              <form className="hero-search" action="/opportunities" method="GET">
-                <label className="hero-search-input"><Search size={20} /><input name="q" placeholder="Search opportunities, skills, organisations..." aria-label="Search opportunities" /></label>
-                <label className="hero-search-category"><span className="sr-only">Category</span><select name="category" defaultValue=""><option value="">All categories</option>{Object.entries(CATEGORY_LABELS).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
-                <button type="submit" className="hero-search-button">Search <ArrowRight size={17} /></button>
-              </form>
-              <div className="hero-trust-line"><ShieldCheck size={15} /><span>Clear eligibility information</span><i /> <span>Trust signals</span><i /> <span>Deadline tracking</span></div>
+        <section className="landing-hero">
+          <div className="landing-hero-inner">
+            <div className="landing-hero-copy">
+              <span className="hero-category-pill"><GraduationCap size={21} /><span>Scholarships · Internships · Jobs · Hackathons · and more</span></span>
+              <h1>Find Opportunities<br />That <span>Fit You</span></h1>
+              <p>Discover verified opportunities, check your eligibility, analyse your resume and never miss a deadline — all in one place.</p>
+              <div className="hero-actions"><Link href="/opportunities" className="hero-primary"><Search size={20} />Explore Opportunities</Link><Link href={user ? "/resume" : "/login"} className="hero-secondary"><FileText size={20} />Analyze Resume</Link></div>
             </div>
-
-            <div className="hero-visual" aria-label="Illustration of opportunities organised in one place">
-              <div className="visual-orbit orbit-one" /><div className="visual-orbit orbit-two" />
-              <div className="visual-leaf leaf-one" /><div className="visual-leaf leaf-two" />
-              <div className="visual-note"><Sparkles size={14} /> FIND YOUR NEXT STEP</div>
-              <div className="visual-main-card">
-                <div className="visual-card-top"><span className="visual-brand-dot" /> AVSAR PICKS <span className="visual-status">FOR YOU</span></div>
-                <div className="visual-card-art"><div className="art-ring"><GraduationCap size={52} strokeWidth={1.6} /></div><div className="art-spark spark-a">✦</div><div className="art-spark spark-b">✳</div></div>
-                <div className="visual-card-copy"><strong>Make your next move count.</strong><span>Opportunities that match your interests.</span></div>
-                <div className="visual-card-footer"><span>DISCOVER</span><ArrowUpRight size={17} /></div>
-              </div>
-              <div className="visual-float-card float-card-top"><span className="float-icon green"><ShieldCheck size={17} /></span><span><b>Eligibility clarity</b><small>Know where you stand</small></span></div>
-              <div className="visual-float-card float-card-bottom"><span className="float-icon orange"><CalendarCheck size={17} /></span><span><b>Deadline reminders</b><small>Stay one step ahead</small></span></div>
-              <div className="visual-sticker">LESS SEARCHING.<br />MORE APPLYING.</div>
-            </div>
+            <div className="landing-hero-art"><StudentIllustration /></div>
           </div>
         </section>
 
-        <section className="categories-section content-wrap">
-          <div className="section-heading-row"><div><span className="section-kicker">START WITH WHAT INTERESTS YOU</span><h2>Explore opportunities</h2><p>Choose a path. Find the next step.</p></div><Link href="/opportunities" className="section-view-link">View all opportunities <ArrowRight size={15} /></Link></div>
-          <div className="category-grid">
-            {categories.map(({ title, subtitle, icon: Icon, color, filter }) => (
-              <Link href={`/opportunities?category=${filter}`} className={`category-tile ${color}`} key={title}>
-                <span className="category-icon"><Icon size={27} strokeWidth={1.8} /></span>
-                <span className="category-copy"><strong>{title}</strong><small>{subtitle}</small></span>
-                <span className="category-arrow"><ArrowUpRight size={17} /></span>
-              </Link>
-            ))}
-          </div>
+        <section className="features-row content-wrap" id="features" aria-label="AVSAR features">
+          {features.map(({ title, text, Icon }) => <article className="feature-card" key={title}><span className="feature-icon"><Icon size={29} strokeWidth={2.1} /></span><div><h2>{title}</h2><p>{text}</p></div></article>)}
         </section>
 
-        <section className="recommended-section content-wrap">
-          <div className="section-heading-row"><div><span className="section-kicker">A FEW PLACES TO START</span><h2>Opportunities worth a look</h2><p>Sample listings to show how AVSAR brings the details together.</p></div><Link href="/opportunities" className="section-view-link">Browse all <ArrowRight size={15} /></Link></div>
-          <div className="recommended-grid">
-            {featured.map((item, index) => (
-              <article className="recommend-card" key={item.id}>
-                <div className={`recommend-mark mark-${index + 1}`}>{index === 0 ? <BriefcaseBusiness size={24} /> : index === 1 ? <Handshake size={24} /> : index === 2 ? <GraduationCap size={24} /> : <Trophy size={24} />}</div>
-                <div className="recommend-content">
-                  <div className="recommend-tags"><span>{CATEGORY_LABELS[item.category] || item.category}</span><span className="trust-tag">{item.trust?.status === "LOW_RISK_INDICATORS" ? "Trust signals available" : item.trust?.status === "NEEDS_REVIEW" ? "Review recommended" : "Not yet assessed"}</span></div>
-                  <h3>{item.title}</h3><p className="recommend-org">{item.organization}</p>
-                  <div className="recommend-meta"><span><MapPin size={13} />{item.location || "Location varies"}</span><span><Clock3 size={13} />{formatDate(item.deadline)}</span></div>
-                  <div className="recommend-bottom"><strong>{item.stipend || "Details on source page"}</strong><Link href={`/opportunities/${item.id}`} aria-label={`View ${item.title}`}><ArrowUpRight size={17} /></Link></div>
-                </div>
-              </article>
-            ))}
+        <section className="category-showcase content-wrap" id="categories">
+          <div className="showcase-heading"><h2>Explore by Category</h2><Link href="/opportunities" className="showcase-link">View All Categories <ArrowRight size={17} /></Link></div>
+          <div className="showcase-categories">
+            {featuredCategories.map(({ title, category, query, Icon, tone }) => <Link href={category ? `/opportunities?category=${encodeURIComponent(category)}` : `/opportunities?q=${encodeURIComponent(query)}`} className={`showcase-category ${tone}`} key={category || query}><Icon size={30} strokeWidth={2} /><span>{title}</span></Link>)}
           </div>
-          <p className="listing-note">These are fictional sample listings for the prototype. Live opportunity discovery and verification require the AVSAR backend.</p>
+          <p className="all-categories-note">Browse all {OPPORTUNITY_CATEGORIES.length} opportunity categories, including government programmes, innovation challenges and more.</p>
         </section>
 
-        <section className="how-section-new">
-          <div className="content-wrap how-section-inner">
-            <div className="how-intro"><span className="section-kicker">HOW AVSAR WORKS</span><h2>From discovery<br />to <span>application.</span></h2><p>One place to find opportunities, understand requirements and keep your next steps organised.</p></div>
-            <div className="how-step-grid">
-              <div className="how-step-new"><span className="how-step-icon"><Search size={22} /></span><div><b>01 · DISCOVER</b><h3>Find relevant opportunities</h3><p>Explore selected sources in one searchable place.</p></div></div>
-              <div className="how-step-new"><span className="how-step-icon orange"><Target size={22} /></span><div><b>02 · CHECK</b><h3>Understand eligibility</h3><p>See the criteria and what still needs confirmation.</p></div></div>
-              <div className="how-step-new"><span className="how-step-icon yellow"><FileText size={22} /></span><div><b>03 · PREPARE</b><h3>Improve your application</h3><p>Compare your resume with the opportunity requirements.</p></div></div>
-              <div className="how-step-new"><span className="how-step-icon sage"><CalendarCheck size={22} /></span><div><b>04 · TRACK</b><h3>Keep deadlines visible</h3><p>Save opportunities and organise application dates.</p></div></div>
-            </div>
-          </div>
+        <section className="landing-opportunities content-wrap" id="opportunities">
+          <div className="showcase-heading"><div><span className="section-kicker">DISCOVER WHAT’S OPEN</span><h2>Opportunities worth a look</h2></div><Link href="/opportunities" className="showcase-link">Explore opportunities <ArrowRight size={17} /></Link></div>
+          {loadError && <div className="inline-message error" role="alert">{loadError}</div>}
+          {loading && user ? <div className="opportunity-grid">{[0,1,2,3].map((n) => <div className="opportunity-card" key={n}><p>Loading opportunities…</p></div>)}</div> : user && featured.length ? <div className="opportunity-grid">
+            {featured.map((item) => <article className="opportunity-card" key={item.id}><div className="card-topline"><span className="card-category-icon"><GraduationCap size={19} /></span><span className="category-label">{CATEGORY_LABELS[item.category] || item.category}</span></div><h3 className="opportunity-title">{item.title}</h3><p className="organization-name">{item.organization || item.provider || "Organization not listed"}</p><div className="opportunity-meta"><span>{item.remote === true ? "Online" : item.remote === false ? "On-site" : "Mode not listed"}</span><span>{formatDate(item.deadline)}</span></div><div className="card-footer"><span className="deadline-label">{item.stipend == null ? "Details on source page" : `${item.stipend} stipend`}</span><Link className="text-link" href={`/opportunities/${encodeURIComponent(item.id)}`}>View details <ArrowUpRight size={15} /></Link></div></article>)}
+          </div> : <div className="opportunities-prompt"><span className="prompt-icon"><BookmarkCheck size={22} /></span><div><strong>{user ? "No opportunities available yet" : "Sign in to see opportunities for you"}</strong><p>{user ? "New listings will appear here as they become available." : "Create your profile to explore listings, check eligibility and save deadlines."}</p></div><Link href={user ? "/opportunities" : "/signup"} className="text-link">{user ? "Browse all opportunities" : "Get started"} <ArrowRight size={15} /></Link></div>}
+          <p className="listing-note">Opportunity details come from the AVSAR backend. Confirm requirements with the original source before applying.</p>
         </section>
 
-        <section className="bottom-banner content-wrap"><div><span className="section-kicker">YOUR NEXT STEP STARTS HERE</span><h2>Find the opportunity.<br /><span>Make it count.</span></h2></div><Link href="/signup" className="banner-button">Create your profile <ArrowRight size={17} /></Link></section>
+        <section className="how-section-new" id="how-it-works"><div className="content-wrap how-section-inner"><div className="how-intro"><span className="section-kicker">A CLEARER WAY FORWARD</span><h2>From discovery<br />to <span>your next step.</span></h2><p>AVSAR brings the details together so you can focus on opportunities that fit your goals.</p></div><div className="how-step-grid">{steps.map(([number, title, text]) => <article className="how-step-new" key={number}><span className="how-step-icon">{number}</span><div><b>{number} · {title.toUpperCase()}</b><h3>{title} opportunities</h3><p>{text}</p></div></article>)}</div></div></section>
+
+        <section className="landing-about content-wrap" id="about"><div><span className="section-kicker">YOUR OPPORTUNITY DESK</span><h2>Find the opportunity.<br /><span>Make it count.</span></h2><p>One place to discover, understand and keep track of the next step in your journey.</p></div><div className="about-actions"><Link href="/signup" className="hero-primary">Create your profile <ArrowRight size={17} /></Link><Link href="/opportunities" className="text-link">Browse opportunities <ArrowUpRight size={15} /></Link></div></section>
       </main>
-      <footer className="public-footer content-wrap"><Link href="/" className="footer-logo">avsar<ArrowUpRight size={13} /></Link><span>Discover more. Apply smarter.</span><span className="footer-disclaimer">A student opportunity assistant · Hackathon prototype</span></footer>
+      <footer className="public-footer content-wrap"><Link href="/" className="footer-logo">avsar</Link><span>The Student Opportunity Platform</span><span className="footer-disclaimer">Always confirm requirements with the original source.</span></footer>
     </div>
   );
 }
