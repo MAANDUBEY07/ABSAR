@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 980" role="img" aria-labelledby="title desc">
+  <title id="title">AVSAR student opportunity assistant</title>
+  <desc id="desc">A confident student mascot in a graduation cap, holding a phone, against bold red sunburst rays with a speech bubble about student opportunities.</desc>
+  <defs>
+    <filter id="hardShadow" x="-25%" y="-25%" width="160%" height="160%">
+      <feOffset dx="12" dy="14" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".38"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="900" height="980" fill="#d92e14"/>
+  <g opacity=".96"><path d="M 450 515 L 1937.2 319.2 A 1500 1500 0 0 1 1937.2 710.8 Z" fill="#ff3d1f"/><path d="M 450 515 L 1937.2 710.8 A 1500 1500 0 0 1 1835.8 1089.0 Z" fill="#d92e14"/><path d="M 450 515 L 1835.8 1089.0 A 1500 1500 0 0 1 1640.0 1428.1 Z" fill="#ff3d1f"/><path d="M 450 515 L 1640.0 1428.1 A 1500 1500 0 0 1 1363.1 1705.0 Z" fill="#d92e14"/><path d="M 450 515 L 1363.1 1705.0 A 1500 1500 0 0 1 1024.0 1900.8 Z" fill="#ff3d1f"/><path d="M 450 515 L 1024.0 1900.8 A 1500 1500 0 0 1 645.8 2002.2 Z" fill="#d92e14"/><path d="M 450 515 L 645.8 2002.2 A 1500 1500 0 0 1 254.2 2002.2 Z" fill="#ff3d1f"/><path d="M 450 515 L 254.2 2002.2 A 1500 1500 0 0 1 -124.0 1900.8 Z" fill="#d92e14"/><path d="M 450 515 L -124.0 1900.8 A 1500 1500 0 0 1 -463.1 1705.0 Z" fill="#ff3d1f"/><path d="M 450 515 L -463.1 1705.0 A 1500 1500 0 0 1 -740.0 1428.1 Z" fill="#d92e14"/><path d="M 450 515 L -740.0 1428.1 A 1500 1500 0 0 1 -935.8 1089.0 Z" fill="#ff3d1f"/><path d="M 450 515 L -935.8 1089.0 A 1500 1500 0 0 1 -1037.2 710.8 Z" fill="#d92e14"/><path d="M 450 515 L -1037.2 710.8 A 1500 1500 0 0 1 -1037.2 319.2 Z" fill="#ff3d1f"/><path d="M 450 515 L -1037.2 319.2 A 1500 1500 0 0 1 -935.8 -59.0 Z" fill="#d92e14"/><path d="M 450 515 L -935.8 -59.0 A 1500 1500 0 0 1 -740.0 -398.1 Z" fill="#ff3d1f"/><path d="M 450 515 L -740.0 -398.1 A 1500 1500 0 0 1 -463.1 -675.0 Z" fill="#d92e14"/><path d="M 450 515 L -463.1 -675.0 A 1500 1500 0 0 1 -124.0 -870.8 Z" fill="#ff3d1f"/><path d="M 450 515 L -124.0 -870.8 A 1500 1500 0 0 1 254.2 -972.2 Z" fill="#d92e14"/><path d="M 450 515 L 254.2 -972.2 A 1500 1500 0 0 1 645.8 -972.2 Z" fill="#ff3d1f"/><path d="M 450 515 L 645.8 -972.2 A 1500 1500 0 0 1 1024.0 -870.8 Z" fill="#d92e14"/><path d="M 450 515 L 1024.0 -870.8 A 1500 1500 0 0 1 1363.1 -675.0 Z" fill="#ff3d1f"/><path d="M 450 515 L 1363.1 -675.0 A 1500 1500 0 0 1 1640.0 -398.1 Z" fill="#d92e14"/><path d="M 450 515 L 1640.0 -398.1 A 1500 1500 0 0 1 1835.8 -59.0 Z" fill="#ff3d1f"/><path d="M 450 515 L 1835.8 -59.0 A 1500 1500 0 0 1 1937.2 319.2 Z" fill="#d92e14"/></g>
+  <circle cx="450" cy="515" r="330" fill="none" stroke="#ff563c" stroke-width="2" opacity=".25"/>
+
+  <!-- Speech bubble: fully inside the art panel and clear of the cap. -->
+  <g filter="url(#hardShadow)" stroke="#0d0d0c" stroke-width="15" stroke-linejoin="round">
+    <path d="M58 32 H590 Q612 32 612 54 V192 Q612 214 590 214 H432 L394 263 L398 214 H58 Q36 214 36 192 V54 Q36 32 58 32Z" fill="#f6f4ee"/>
+  </g>
+  <g fill="#0d0d0c" font-family="Impact, 'Arial Narrow', sans-serif" font-weight="900">
+    <text x="76" y="97" font-size="43" letter-spacing="-1">SCATTERED LINKS?</text>
+    <text x="76" y="147" font-size="40" letter-spacing="-1">UNCLEAR CRITERIA?</text>
+  </g>
+  <text x="78" y="183" fill="#6d6b63" font-family="Arial, sans-serif" font-size="18" font-weight="700">AVSAR brings every opportunity into focus.</text>
+
+  <!-- Small star spark, isolated from the main copy. -->
+  <g transform="translate(740 315)" fill="#f6f4ee" stroke="#0d0d0c" stroke-width="8" stroke-linejoin="round">
+    <path d="M0 -34 L12 -10 L38 0 L12 10 L0 36 L-12 10 L-38 0 L-12 -10Z"/>
+  </g>
+
+  <!-- Body and shoulders. -->
+  <g stroke="#0d0d0c" stroke-width="18" stroke-linejoin="round" stroke-linecap="round" filter="url(#hardShadow)">
+    <path d="M205 980 Q228 812 336 773 Q450 731 566 773 Q681 814 704 980Z" fill="#0d0d0c"/>
+    <path d="M365 770 L450 865 L535 770" fill="#f6f4ee"/>
+    <path d="M389 786 L450 861 L511 786" fill="#c8ff2e"/>
+    <path d="M406 715 V790 Q450 824 494 790 V715" fill="#f6f4ee"/>
+    <!-- ears -->
+    <path d="M259 475 Q202 451 197 514 Q202 574 265 573" fill="#f6f4ee"/>
+    <path d="M641 475 Q698 451 703 514 Q698 574 635 573" fill="#f6f4ee"/>
+    <!-- face -->
+    <path d="M276 402 Q450 328 624 402 L616 655 Q603 739 450 744 Q297 739 284 655Z" fill="#f6f4ee"/>
+    <!-- graduation cap -->
+    <path d="M278 424 Q294 290 450 277 Q606 290 622 424 L622 452 Q450 412 278 452Z" fill="#c8ff2e"/>
+    <path d="M240 410 L450 334 L660 410 L450 492Z" fill="#c8ff2e"/>
+    <path d="M623 411 L690 454" fill="none" stroke-width="10"/>
+    <circle cx="697" cy="460" r="13" fill="#ff3d1f"/>
+    <!-- glasses -->
+    <rect x="306" y="496" width="128" height="72" rx="13" fill="#0d0d0c"/>
+    <rect x="466" y="496" width="128" height="72" rx="13" fill="#0d0d0c"/>
+    <path d="M434 526 Q450 514 466 526" fill="none" stroke-width="14"/>
+    <path d="M328 513 L364 550 M359 511 L391 544 M487 513 L523 550 M518 511 L550 544" fill="none" stroke="#f6f4ee" stroke-width="8"/>
+    <!-- nose -->
+    <path d="M454 560 Q428 601 451 613" fill="none" stroke-width="11"/>
+    <!-- smile -->
+    <path d="M354 647 Q450 682 546 647 Q533 723 450 725 Q367 722 354 647Z" fill="#c8ff2e" stroke="#0d0d0c" stroke-width="9"/>
+    <path d="M359 655 H541 M404 660 V708 M450 664 V717 M496 660 V708" fill="none" stroke-width="8"/>
+    <!-- phone -->
+    <path d="M668 510 Q670 492 688 490 L741 480 Q759 477 764 495 L795 665 Q799 684 780 689 L727 699 Q709 703 705 684Z" fill="#f6f4ee"/>
+    <path d="M689 518 L739 509 L768 663 L716 673Z" fill="#0d0d0c" stroke="none"/>
+  </g>
+
+  <!-- Student ID lanyard dots. -->
+  <g fill="#c8ff2e"><circle cx="339" cy="846" r="9"/><circle cx="365" cy="866" r="8"/><circle cx="393" cy="883" r="7"/><circle cx="561" cy="846" r="9"/><circle cx="535" cy="866" r="8"/><circle cx="507" cy="883" r="7"/></g>
+
+  <!-- One contained lime sticker, no HTML overlays needed. -->
+  <g transform="rotate(-5 675 900)" filter="url(#hardShadow)">
+    <rect x="490" y="858" width="380" height="75" fill="#c8ff2e" stroke="#0d0d0c" stroke-width="10"/>
+    <text x="516" y="905" fill="#0d0d0c" font-family="Impact, 'Arial Narrow', sans-serif" font-size="31" font-weight="900" letter-spacing="-.6">CHECK. APPLY. TRACK.</text>
+  </g>
+</svg>
