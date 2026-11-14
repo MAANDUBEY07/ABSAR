@@ -13,7 +13,7 @@ Important:
 import json
 import logging
 import os
-from typing import Literal
+from typing import Any, Literal
 
 from dotenv import load_dotenv
 from google import genai
@@ -35,8 +35,16 @@ OpportunityCategory = Literal[
     "internship",
     "job",
     "government_scheme",
+    "fellowship",
+    "apprenticeship",
+    "hackathon",
+    "coding_competition",
+    "innovation_challenge",
+    "startup_challenge",
     "grant",
 ]
+
+OpportunityMode = Literal["online", "offline", "hybrid"]
 
 
 class ExtractedOpportunity(BaseModel):
@@ -58,8 +66,10 @@ class ExtractedOpportunity(BaseModel):
     required_skills: list[str] = Field(default_factory=list)
 
     location: str | None = None
+    opportunity_mode: OpportunityMode | None = None
     stipend_or_benefit: str | None = None
 
+    category_metadata: dict[str, Any] = Field(default_factory=dict)
     missing_fields: list[str] = Field(default_factory=list)
 
 
@@ -140,12 +150,25 @@ STRICT RULES:
 3. If a field is not mentioned, return null.
 4. If eligibility criteria are not mentioned, return an empty list.
 5. If required skills are not mentioned, return an empty list.
-6. Do not assume that an opportunity is a scholarship or internship
-   unless the notice supports that classification.
+6. Classify the opportunity accurately into one of the 11 supported categories:
+   - scholarship: Government, private, or merit scholarships
+   - internship: Technical, corporate, or research internships
+   - job: Graduate, fresher, and entry-level jobs
+   - government_scheme: Central and state public schemes
+   - fellowship: Academic, research, and professional fellowships
+   - apprenticeship: NATS, NAPS, and industrial apprenticeships
+   - hackathon: Technical hackathons and buildathons
+   - coding_competition: Algorithmic and competitive programming contests
+   - innovation_challenge: Student innovation, hardware, and design challenges
+   - startup_challenge: Incubation, pitch competitions, and startup grants
+   - grant: Research, student, and academic innovation grants
+   Do not guess or assume a category unless the notice text provides clear evidence.
 7. Preserve the original meaning of eligibility conditions.
 8. Do not convert vague deadlines into guessed dates.
-9. Add important unavailable fields to missing_fields.
-10. Return data matching the provided structured schema.
+9. Extract participation mode (online, offline, hybrid) if mentioned into opportunity_mode.
+10. Capture category-specific metadata (e.g. prize_pool, team_size, duration, stipend) into category_metadata where present.
+11. Add important unavailable fields to missing_fields.
+12. Return data matching the provided structured schema.
 
 Original source URL:
 {source_url or "Not provided"}

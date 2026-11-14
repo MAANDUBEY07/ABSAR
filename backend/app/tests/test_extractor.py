@@ -52,6 +52,81 @@ class TestAIExtractor(unittest.TestCase):
                 category="random_category",
             )
 
+    def test_all_eleven_categories_accepted(self):
+        """Verify that all 11 canonical categories are accepted by ExtractedOpportunity."""
+        categories = [
+            "scholarship",
+            "internship",
+            "job",
+            "government_scheme",
+            "fellowship",
+            "apprenticeship",
+            "hackathon",
+            "coding_competition",
+            "innovation_challenge",
+            "startup_challenge",
+            "grant",
+        ]
+        for cat in categories:
+            opp = ExtractedOpportunity(
+                title=f"Sample {cat.replace('_', ' ').title()}",
+                category=cat,
+                organization="Test Org",
+            )
+            self.assertEqual(opp.category, cat)
+
+    def test_hackathon_with_category_metadata_and_mode(self):
+        """Verify hackathon opportunity with participation mode and specific metadata."""
+        opp = ExtractedOpportunity(
+            title="AVSAR National Hackathon 2026",
+            category="hackathon",
+            organization="AVSAR Foundation",
+            opportunity_mode="hybrid",
+            category_metadata={
+                "prize_pool": "INR 5,00,000",
+                "team_size_min": 2,
+                "team_size_max": 4,
+                "themes": ["AI for Good", "Education", "Civic Tech"],
+            },
+            required_skills=["Python", "React", "Machine Learning"],
+        )
+        self.assertEqual(opp.category, "hackathon")
+        self.assertEqual(opp.opportunity_mode, "hybrid")
+        self.assertEqual(opp.category_metadata["prize_pool"], "INR 5,00,000")
+        self.assertEqual(opp.category_metadata["team_size_max"], 4)
+        self.assertIn("Python", opp.required_skills)
+
+    def test_apprenticeship_and_fellowship_schemas(self):
+        """Verify fellowship and apprenticeship schemas with specialized fields."""
+        fellowship = ExtractedOpportunity(
+            title="Prime Minister Research Fellowship",
+            category="fellowship",
+            organization="Ministry of Education",
+            stipend_or_benefit="INR 70,000/month",
+            category_metadata={"duration_months": 24, "research_area": "Computer Science"},
+        )
+        self.assertEqual(fellowship.category, "fellowship")
+        self.assertEqual(fellowship.category_metadata["duration_months"], 24)
+
+        apprenticeship = ExtractedOpportunity(
+            title="NATS Graduate Apprentice",
+            category="apprenticeship",
+            organization="BHEL",
+            opportunity_mode="offline",
+            stipend_or_benefit="INR 9,000/month stipend",
+        )
+        self.assertEqual(apprenticeship.category, "apprenticeship")
+        self.assertEqual(apprenticeship.opportunity_mode, "offline")
+
+    def test_invalid_opportunity_mode_rejected(self):
+        """Verify that an invalid opportunity_mode raises a validation error."""
+        with self.assertRaises(ValueError):
+            ExtractedOpportunity(
+                title="Invalid Mode Opp",
+                category="internship",
+                opportunity_mode="telepathic",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
