@@ -25,7 +25,7 @@ from enum import Enum
 import logging
 import math
 import re
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
@@ -34,30 +34,33 @@ logger = logging.getLogger(__name__)
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class Operator(str, Enum):
     """Supported operators for criterion evaluation."""
+
     EQUALS = "EQUALS"
     NOT_EQUALS = "NOT_EQUALS"
     GREATER_THAN = "GREATER_THAN"
     GREATER_THAN_OR_EQUAL = "GREATER_THAN_OR_EQUAL"
     LESS_THAN = "LESS_THAN"
     LESS_THAN_OR_EQUAL = "LESS_THAN_OR_EQUAL"
-    BETWEEN = "BETWEEN"                   # Inclusive: [min, max]
-    IN = "IN"                             # Value in list/set
-    NOT_IN = "NOT_IN"                     # Value not in list/set
-    CONTAINS = "CONTAINS"                 # Candidate field (list/str) contains value
+    BETWEEN = "BETWEEN"  # Inclusive: [min, max]
+    IN = "IN"  # Value in list/set
+    NOT_IN = "NOT_IN"  # Value not in list/set
+    CONTAINS = "CONTAINS"  # Candidate field (list/str) contains value
     NOT_CONTAINS = "NOT_CONTAINS"
-    ANY_OF = "ANY_OF"                     # Intersection between candidate list and allowed set
-    ALL_OF = "ALL_OF"                     # Candidate list contains all required values
-    NONE_OF = "NONE_OF"                   # Candidate list has no overlap with forbidden set
-    EXISTS = "EXISTS"                     # Field is present and not None
-    NOT_EXISTS = "NOT_EXISTS"             # Field is absent or None
-    REGEX_MATCH = "REGEX_MATCH"           # Regex matches string value
-    CUSTOM = "CUSTOM"                     # Custom evaluator function
+    ANY_OF = "ANY_OF"  # Intersection between candidate list and allowed set
+    ALL_OF = "ALL_OF"  # Candidate list contains all required values
+    NONE_OF = "NONE_OF"  # Candidate list has no overlap with forbidden set
+    EXISTS = "EXISTS"  # Field is present and not None
+    NOT_EXISTS = "NOT_EXISTS"  # Field is absent or None
+    REGEX_MATCH = "REGEX_MATCH"  # Regex matches string value
+    CUSTOM = "CUSTOM"  # Custom evaluator function
 
 
 class LogicalCombinator(str, Enum):
     """Combinators for rule groups."""
+
     AND = "AND"
     OR = "OR"
     NOT = "NOT"
@@ -65,6 +68,7 @@ class LogicalCombinator(str, Enum):
 
 class EligibilityStatus(str, Enum):
     """Overall outcome of an eligibility evaluation."""
+
     ELIGIBLE = "ELIGIBLE"
     INELIGIBLE = "INELIGIBLE"
     INCOMPLETE_DATA = "INCOMPLETE_DATA"  # Missing profile fields prevented a definitive pass
@@ -76,6 +80,7 @@ class EligibilityStatus(str, Enum):
 
 class APIEligibilityStatus(str, Enum):
     """Externally visible AVSAR API contract eligibility statuses."""
+
     ELIGIBLE = "ELIGIBLE"
     POTENTIALLY_ELIGIBLE = "POTENTIALLY_ELIGIBLE"
     NOT_ELIGIBLE = "NOT_ELIGIBLE"
@@ -85,6 +90,7 @@ class APIEligibilityStatus(str, Enum):
 # ---------------------------------------------------------------------------
 # Core Data Models
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class Criterion:
@@ -102,6 +108,7 @@ class Criterion:
         category: Logical grouping (e.g., 'Demographics', 'Education', 'Financial').
         custom_fn: Optional callable for CUSTOM operator: fn(candidate_value, expected_value) -> bool.
     """
+
     field: str
     operator: Union[Operator, str]
     value: Any = None
@@ -122,7 +129,9 @@ class Criterion:
     def to_dict(self) -> Dict[str, Any]:
         return {
             "field": self.field,
-            "operator": self.operator.value if isinstance(self.operator, Operator) else str(self.operator),
+            "operator": self.operator.value
+            if isinstance(self.operator, Operator)
+            else str(self.operator),
             "value": self.value,
             "description": self.description or f"{self.field} {self.operator} {self.value}",
             "mandatory": self.mandatory,
@@ -148,6 +157,7 @@ class RuleGroup:
     """
     A composite logical group combining multiple Criteria or nested RuleGroups.
     """
+
     combinator: LogicalCombinator = LogicalCombinator.AND
     rules: List[Union[Criterion, "RuleGroup"]] = field(default_factory=list)
     description: Optional[str] = None
@@ -162,7 +172,9 @@ class RuleGroup:
             elif isinstance(r, dict):
                 serialized_rules.append(r)
         return {
-            "combinator": self.combinator.value if isinstance(self.combinator, LogicalCombinator) else str(self.combinator),
+            "combinator": self.combinator.value
+            if isinstance(self.combinator, LogicalCombinator)
+            else str(self.combinator),
             "rules": serialized_rules,
             "description": self.description,
             "mandatory": self.mandatory,
@@ -173,6 +185,7 @@ class RuleGroup:
 @dataclass
 class CriterionResult:
     """Detailed result of evaluating a single Criterion."""
+
     criterion: Criterion
     passed: bool
     actual_value: Any
@@ -183,7 +196,8 @@ class CriterionResult:
     def to_dict(self) -> Dict[str, Any]:
         return {
             "field": self.criterion.field,
-            "criterion_description": self.criterion.description or f"{self.criterion.field} {self.criterion.operator} {self.criterion.value}",
+            "criterion_description": self.criterion.description
+            or f"{self.criterion.field} {self.criterion.operator} {self.criterion.value}",
             "passed": self.passed,
             "actual_value": self.actual_value,
             "expected_value": self.expected_value,
@@ -200,6 +214,7 @@ class EligibilityResult:
     """
     Complete output of evaluating a candidate against an opportunity/scheme.
     """
+
     is_eligible: bool
     status: EligibilityStatus
     score: float  # Percentage score (0.0 to 100.0)
@@ -220,9 +235,15 @@ class EligibilityResult:
         - INCOMPLETE_DATA -> POTENTIALLY_ELIGIBLE
         - CANNOT_DETERMINE -> CANNOT_DETERMINE
         """
-        if self.status in (EligibilityStatus.CANNOT_DETERMINE, APIEligibilityStatus.CANNOT_DETERMINE):
+        if self.status in (
+            EligibilityStatus.CANNOT_DETERMINE,
+            APIEligibilityStatus.CANNOT_DETERMINE,
+        ):
             return APIEligibilityStatus.CANNOT_DETERMINE
-        elif self.status in (EligibilityStatus.INCOMPLETE_DATA, APIEligibilityStatus.POTENTIALLY_ELIGIBLE):
+        elif self.status in (
+            EligibilityStatus.INCOMPLETE_DATA,
+            APIEligibilityStatus.POTENTIALLY_ELIGIBLE,
+        ):
             return APIEligibilityStatus.POTENTIALLY_ELIGIBLE
         elif self.status in (EligibilityStatus.INELIGIBLE, APIEligibilityStatus.NOT_ELIGIBLE):
             return APIEligibilityStatus.NOT_ELIGIBLE
@@ -238,20 +259,32 @@ class EligibilityResult:
     @property
     def has_missing_opportunity_criteria(self) -> bool:
         """Indicates whether the opportunity itself lacks criteria specification."""
-        return self.status in (EligibilityStatus.CANNOT_DETERMINE, APIEligibilityStatus.CANNOT_DETERMINE)
+        return self.status in (
+            EligibilityStatus.CANNOT_DETERMINE,
+            APIEligibilityStatus.CANNOT_DETERMINE,
+        )
 
     @property
     def summary(self) -> str:
         if self.status in (EligibilityStatus.ELIGIBLE, APIEligibilityStatus.ELIGIBLE):
             return f"Eligible with match score of {self.score:.1f}%."
-        elif self.status in (EligibilityStatus.INCOMPLETE_DATA, APIEligibilityStatus.POTENTIALLY_ELIGIBLE):
+        elif self.status in (
+            EligibilityStatus.INCOMPLETE_DATA,
+            APIEligibilityStatus.POTENTIALLY_ELIGIBLE,
+        ):
             fields_str = ", ".join(self.missing_fields)
             return f"Incomplete Profile: Missing required fields ({fields_str}) to determine full eligibility."
-        elif self.status in (EligibilityStatus.CANNOT_DETERMINE, APIEligibilityStatus.CANNOT_DETERMINE):
+        elif self.status in (
+            EligibilityStatus.CANNOT_DETERMINE,
+            APIEligibilityStatus.CANNOT_DETERMINE,
+        ):
             return "Cannot Determine: Opportunity has no eligibility criteria defined."
         else:
             failed_mandatory = [c for c in self.failed_criteria if c.criterion.mandatory]
-            reasons_str = "; ".join([c.reason for c in failed_mandatory]) or "Did not satisfy eligibility rules."
+            reasons_str = (
+                "; ".join([c.reason for c in failed_mandatory])
+                or "Did not satisfy eligibility rules."
+            )
             return f"Ineligible: {reasons_str}"
 
     def to_dict(self) -> Dict[str, Any]:
@@ -281,6 +314,7 @@ class Scheme:
     """
     Represents an opportunity, welfare scheme, grant, or job opening in AVSAR.
     """
+
     id: str
     title: str
     description: Optional[str] = None
@@ -348,6 +382,7 @@ class CandidateProfile:
     Represents a candidate/user profile in AVSAR.
     Can be loaded directly from a dict or built incrementally.
     """
+
     id: Optional[str] = None
     data: Dict[str, Any] = field(default_factory=dict)
 
@@ -362,13 +397,18 @@ class CandidateProfile:
 
     @classmethod
     def from_dict(cls, profile_dict: Dict[str, Any]) -> "CandidateProfile":
-        cand_id = profile_dict.get("id") or profile_dict.get("candidate_id") or profile_dict.get("user_id")
+        cand_id = (
+            profile_dict.get("id")
+            or profile_dict.get("candidate_id")
+            or profile_dict.get("user_id")
+        )
         return cls(id=str(cand_id) if cand_id else None, data=copy.deepcopy(profile_dict))
 
 
 # ---------------------------------------------------------------------------
 # Eligibility Engine Implementation
 # ---------------------------------------------------------------------------
+
 
 class EligibilityEngine:
     """
@@ -436,7 +476,11 @@ class EligibilityEngine:
                         return default
                 except ValueError:
                     # Projection: e.g. path 'skills.name' where skills is a list of dicts
-                    projected = [item.get(token) for item in current if isinstance(item, dict) and token in item]
+                    projected = [
+                        item.get(token)
+                        for item in current
+                        if isinstance(item, dict) and token in item
+                    ]
                     current = projected if projected else default
             elif hasattr(current, token):
                 current = getattr(current, token)
@@ -446,7 +490,9 @@ class EligibilityEngine:
         return current
 
     @staticmethod
-    def calculate_age(dob_input: Union[str, date, datetime], reference_date: Optional[date] = None) -> Optional[int]:
+    def calculate_age(
+        dob_input: Union[str, date, datetime], reference_date: Optional[date] = None
+    ) -> Optional[int]:
         """Calculates current age in completed years from a date of birth."""
         if reference_date is None:
             reference_date = date.today()
@@ -460,8 +506,13 @@ class EligibilityEngine:
             dob_str = dob_input.strip()
             # Try multiple common date formats
             formats = [
-                "%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%m/%d/%Y",
-                "%Y/%m/%d", "%d.%m.%Y", "%Y.%m.%d"
+                "%Y-%m-%d",
+                "%d-%m-%Y",
+                "%d/%m/%Y",
+                "%m/%d/%Y",
+                "%Y/%m/%d",
+                "%d.%m.%Y",
+                "%Y.%m.%d",
             ]
             for fmt in formats:
                 try:
@@ -509,7 +560,9 @@ class EligibilityEngine:
     # Evaluation of Single Criterion
     # -----------------------------------------------------------------------
 
-    def evaluate_criterion(self, candidate_data: Dict[str, Any], criterion: Criterion) -> CriterionResult:
+    def evaluate_criterion(
+        self, candidate_data: Dict[str, Any], criterion: Criterion
+    ) -> CriterionResult:
         """
         Evaluates a candidate profile against a single Criterion.
         """
@@ -531,7 +584,7 @@ class EligibilityEngine:
                 actual_value=actual_value,
                 expected_value="EXISTS",
                 reason=reason,
-                is_missing=(not passed)
+                is_missing=(not passed),
             )
 
         if op == Operator.NOT_EXISTS:
@@ -547,7 +600,7 @@ class EligibilityEngine:
                 actual_value=actual_value,
                 expected_value="NOT_EXISTS",
                 reason=reason,
-                is_missing=False
+                is_missing=False,
             )
 
         # Check for missing field or unpopulated skills collection
@@ -565,7 +618,7 @@ class EligibilityEngine:
                 actual_value=actual_value,
                 expected_value=expected_value,
                 reason=f"Candidate profile has no recorded '{criterion.field}' information ({desc}).",
-                is_missing=True
+                is_missing=True,
             )
 
         # Evaluate based on operator
@@ -587,8 +640,10 @@ class EligibilityEngine:
 
             # Numerical comparisons
             elif op in (
-                Operator.GREATER_THAN, Operator.GREATER_THAN_OR_EQUAL,
-                Operator.LESS_THAN, Operator.LESS_THAN_OR_EQUAL
+                Operator.GREATER_THAN,
+                Operator.GREATER_THAN_OR_EQUAL,
+                Operator.LESS_THAN,
+                Operator.LESS_THAN_OR_EQUAL,
             ):
                 cand_num = self._to_numeric(actual_value)
                 exp_num = self._to_numeric(expected_value)
@@ -624,19 +679,23 @@ class EligibilityEngine:
                     min_val = self._to_numeric(expected_value[0])
                     max_val = self._to_numeric(expected_value[1])
                     if cand_num is not None and min_val is not None and max_val is not None:
-                        passed = (min_val <= cand_num <= max_val)
+                        passed = min_val <= cand_num <= max_val
                     else:
                         passed = False
                         reason = f"Invalid bounds for BETWEEN comparison: range={expected_value}, value={actual_value}."
                 else:
                     passed = False
-                    reason = f"BETWEEN operator expects [min, max] list or tuple, got {expected_value}."
+                    reason = (
+                        f"BETWEEN operator expects [min, max] list or tuple, got {expected_value}."
+                    )
 
             # Equality & Inequality
             elif op == Operator.EQUALS:
                 # Case-insensitive if both are strings
                 if isinstance(actual_value, str) and isinstance(expected_value, str):
-                    passed = self._normalize_string(actual_value) == self._normalize_string(expected_value)
+                    passed = self._normalize_string(actual_value) == self._normalize_string(
+                        expected_value
+                    )
                 else:
                     # Compare numeric if both can be numeric
                     n_act = self._to_numeric(actual_value)
@@ -644,18 +703,20 @@ class EligibilityEngine:
                     if n_act is not None and n_exp is not None:
                         passed = math.isclose(n_act, n_exp, rel_tol=1e-9)
                     else:
-                        passed = (actual_value == expected_value)
+                        passed = actual_value == expected_value
 
             elif op == Operator.NOT_EQUALS:
                 if isinstance(actual_value, str) and isinstance(expected_value, str):
-                    passed = self._normalize_string(actual_value) != self._normalize_string(expected_value)
+                    passed = self._normalize_string(actual_value) != self._normalize_string(
+                        expected_value
+                    )
                 else:
                     n_act = self._to_numeric(actual_value)
                     n_exp = self._to_numeric(expected_value)
                     if n_act is not None and n_exp is not None:
                         passed = not math.isclose(n_act, n_exp, rel_tol=1e-9)
                     else:
-                        passed = (actual_value != expected_value)
+                        passed = actual_value != expected_value
 
             # Inclusion: IN & NOT_IN
             elif op in (Operator.IN, Operator.NOT_IN):
@@ -684,7 +745,9 @@ class EligibilityEngine:
                         contains = expected_value in actual_value
                 elif isinstance(actual_value, str):
                     # Substring check
-                    contains = self._normalize_string(expected_value) in self._normalize_string(actual_value)
+                    contains = self._normalize_string(expected_value) in self._normalize_string(
+                        actual_value
+                    )
                 else:
                     contains = False
 
@@ -692,8 +755,14 @@ class EligibilityEngine:
 
             # Set operations: ANY_OF, ALL_OF, NONE_OF
             elif op in (Operator.ANY_OF, Operator.ALL_OF, Operator.NONE_OF):
-                cand_list = actual_value if isinstance(actual_value, (list, tuple, set)) else [actual_value]
-                exp_list = expected_value if isinstance(expected_value, (list, tuple, set)) else [expected_value]
+                cand_list = (
+                    actual_value if isinstance(actual_value, (list, tuple, set)) else [actual_value]
+                )
+                exp_list = (
+                    expected_value
+                    if isinstance(expected_value, (list, tuple, set))
+                    else [expected_value]
+                )
 
                 # Normalize to strings if appropriate
                 cand_norm = {self._normalize_string(x) for x in cand_list}
@@ -737,7 +806,7 @@ class EligibilityEngine:
             actual_value=actual_value,
             expected_value=expected_value,
             reason=reason,
-            is_missing=False
+            is_missing=False,
         )
 
     # -----------------------------------------------------------------------
@@ -813,7 +882,11 @@ class EligibilityEngine:
         - detailed breakdown of passed, failed, and missing criteria
         """
         # Parse inputs if raw dicts
-        cand_dict = candidate.to_dict() if isinstance(candidate, CandidateProfile) else copy.deepcopy(candidate)
+        cand_dict = (
+            candidate.to_dict()
+            if isinstance(candidate, CandidateProfile)
+            else copy.deepcopy(candidate)
+        )
         scheme_obj = Scheme.from_dict(scheme) if isinstance(scheme, dict) else scheme
 
         # Distinguish missing opportunity criteria: if scheme has no criteria defined
@@ -826,7 +899,9 @@ class EligibilityEngine:
                 failed_criteria=[],
                 missing_criteria=[],
                 missing_fields=[],
-                reasons=["Opportunity has no eligibility criteria defined; eligibility cannot be determined."],
+                reasons=[
+                    "Opportunity has no eligibility criteria defined; eligibility cannot be determined."
+                ],
                 scheme_id=scheme_obj.id,
                 scheme_title=scheme_obj.title,
             )
@@ -1010,9 +1085,7 @@ class EligibilityEngine:
         actionable_steps: List[str] = []
 
         if res.missing_fields:
-            actionable_steps.append(
-                f"Update your profile with: {', '.join(res.missing_fields)}."
-            )
+            actionable_steps.append(f"Update your profile with: {', '.join(res.missing_fields)}.")
 
         for failed in res.failed_criteria:
             if failed.criterion.mandatory:
@@ -1028,8 +1101,12 @@ class EligibilityEngine:
             "score": round(res.score, 2),
             "summary": res.summary,
             "actionable_steps": actionable_steps,
-            "passed_requirements": [p.criterion.description or p.criterion.field for p in res.passed_criteria],
-            "failed_requirements": [f.criterion.description or f.criterion.field for f in res.failed_criteria],
+            "passed_requirements": [
+                p.criterion.description or p.criterion.field for p in res.passed_criteria
+            ],
+            "failed_requirements": [
+                f.criterion.description or f.criterion.field for f in res.failed_criteria
+            ],
             "missing_profile_fields": res.missing_fields,
         }
 
@@ -1038,7 +1115,9 @@ class EligibilityEngine:
     # -----------------------------------------------------------------------
 
     @staticmethod
-    def build_age_criterion(min_age: Optional[int] = None, max_age: Optional[int] = None, mandatory: bool = True) -> Criterion:
+    def build_age_criterion(
+        min_age: Optional[int] = None, max_age: Optional[int] = None, mandatory: bool = True
+    ) -> Criterion:
         """Helper to create age criteria."""
         if min_age is not None and max_age is not None:
             return Criterion(
@@ -1082,7 +1161,9 @@ class EligibilityEngine:
         )
 
     @staticmethod
-    def build_caste_category_criterion(allowed_categories: List[str], mandatory: bool = True) -> Criterion:
+    def build_caste_category_criterion(
+        allowed_categories: List[str], mandatory: bool = True
+    ) -> Criterion:
         """Helper to create caste/social category criteria (e.g. ['SC', 'ST', 'OBC', 'General', 'EWS'])."""
         return Criterion(
             field="category",
@@ -1118,7 +1199,9 @@ class EligibilityEngine:
         )
 
     @staticmethod
-    def build_education_percentage_criterion(min_percentage: float, mandatory: bool = True) -> Criterion:
+    def build_education_percentage_criterion(
+        min_percentage: float, mandatory: bool = True
+    ) -> Criterion:
         """Helper to create minimum marks percentage criteria."""
         return Criterion(
             field="education.percentage",

@@ -1,7 +1,12 @@
-"""
-Trust Schemas
-=============
-Pydantic schemas for authenticity signals, official verification status, and audit reports.
-"""
+from app.models.trust_report import TrustReport as TrustReportResponse
+from pydantic import Field
 
-# Placeholder: Trust verification request and response schemas.
+from .base import Input
+
+
+class Report(Input):
+    opportunity_id: str
+    reason: str = Field(min_length=1, max_length=2000)
+
+
+__all__ = ["Report", "TrustReportResponse"]

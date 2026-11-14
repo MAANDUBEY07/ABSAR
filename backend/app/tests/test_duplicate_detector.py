@@ -24,24 +24,18 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 
 try:
     from app.services.duplicate_detector import (
-        DuplicateComparisonResult,
         DuplicateDetector,
         DuplicateDetectorConfig,
         compare_deadlines,
-        compare_opportunities,
-        find_duplicates,
         generate_content_hash,
         normalize_deadline,
         normalize_text,
     )
 except ImportError:
-    from backend.app.services.duplicate_detector import (
-        DuplicateComparisonResult,
+    from app.services.duplicate_detector import (
         DuplicateDetector,
         DuplicateDetectorConfig,
         compare_deadlines,
-        compare_opportunities,
-        find_duplicates,
         generate_content_hash,
         normalize_deadline,
         normalize_text,

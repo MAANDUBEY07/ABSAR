@@ -1,7 +1,75 @@
-"""
-Trust & Verification Routes
-===========================
-API endpoints for retrieving opportunity authenticity audits and credibility scores.
-"""
+from fastapi import APIRouter, HTTPException
+from app.routes.common import Owner, ok
+from app.models.base import now
+from app.models.base import uid
+from app.repositories import documents
+from app.schemas.eligibility import MatchInput
+from app.schemas.trust import Report
+from app.services.catalog import opportunity
+from app.services.trust_checker import analyze
 
-# Placeholder: Endpoints for GET /api/v1/trust/verify/{opportunity_id}.
+router = APIRouter()
+
+
+@router.post("/verification/analyze")
+def risk(body: MatchInput, owner: Owner):
+    data = opportunity(body.opportunity_id)
+    result = dict(
+        analyze(data),
+        owner_id=owner,
+        opportunity_id=data["id"],
+        analyzed_at=now().isoformat(),
+        source_snapshot=data,
+    )
+    snapshot_id = uid()
+    documents.put(
+        "opportunity_source_snapshots",
+        snapshot_id,
+        dict(owner_id=owner, opportunity_id=data["id"], source=data),
+    )
+    result["snapshot_id"] = snapshot_id
+    return ok(documents.put("verification_results", uid(), result))
+
+
+@router.get("/verification/{record_id}/history")
+def history(record_id: str, owner: Owner):
+    rows = [
+        r
+        for r in documents.scan("verification_results", owner=owner)
+        if r.get("opportunity_id") == record_id
+    ]
+    rows.sort(key=lambda r: r.get("analyzed_at", ""), reverse=True)
+    return ok(rows)
+
+
+@router.get("/verification/{record_id}")
+def verification(record_id: str, owner: Owner):
+    rows = history(record_id, owner)["data"]
+    if not rows:
+        raise HTTPException(404, "No private verification history")
+    return ok(rows[0])
+
+
+@router.post("/verification/report", status_code=201)
+def report(body: Report, owner: Owner):
+    opportunity(body.opportunity_id)
+    return ok(
+        documents.put(
+            "verification_results",
+            uid(),
+            dict(
+                body.model_dump(),
+                owner_id=owner,
+                type="USER_ALLEGATION",
+                proven=False,
+                reported_at=now().isoformat(),
+            ),
+        )
+    )
+
+
+@router.get("/trust/verify/{opportunity_id}")
+def trust_report(opportunity_id: str, owner: Owner):
+    rows = history(opportunity_id, owner)["data"]
+    analyses = [r for r in rows if "risk_score" in r]
+    return ok(analyses[0]) if analyses else risk(MatchInput(opportunity_id=opportunity_id), owner)

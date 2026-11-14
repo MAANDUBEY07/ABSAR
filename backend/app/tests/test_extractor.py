@@ -12,7 +12,6 @@ from app.services.ai_extractor import (
 
 
 class TestAIExtractor(unittest.TestCase):
-
     def test_empty_notice_is_rejected(self):
         with self.assertRaises(ValueError):
             extract_opportunity("")
@@ -31,9 +30,7 @@ class TestAIExtractor(unittest.TestCase):
             category="internship",
             organization="Example Organization",
             deadline=None,
-            eligibility_criteria=[
-                "Must be an undergraduate student."
-            ],
+            eligibility_criteria=["Must be an undergraduate student."],
         )
 
         self.assertEqual(

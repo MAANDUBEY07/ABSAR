@@ -10,7 +10,6 @@ from app.services.notice_parser import parse_pdf
 
 
 class TestNoticeParser(unittest.TestCase):
-
     def create_test_pdf(self, text=None):
         """Create a PDF in memory for testing."""
 
@@ -29,16 +28,11 @@ class TestNoticeParser(unittest.TestCase):
 
     def test_extract_text_from_pdf(self):
 
-        pdf = self.create_test_pdf(
-            "AVSAR Opportunity Discovery Test"
-        )
+        pdf = self.create_test_pdf("AVSAR Opportunity Discovery Test")
 
         result = parse_pdf(pdf)
 
-        self.assertIn(
-            "AVSAR Opportunity Discovery Test",
-            result.text
-        )
+        self.assertIn("AVSAR Opportunity Discovery Test", result.text)
 
         self.assertEqual(result.page_count, 1)
         self.assertTrue(result.has_extractable_text)
