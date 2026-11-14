@@ -8,16 +8,18 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.checkpoint.postgres import PostgresSaver
 from app.config import settings
 from app.config.database import Session
+from app.models.runtime import Job
 from app.models.runtime import CareerGoal
 from app.models.runtime import CareerMilestone
 from app.models.profile import Profile
 from app.services.matching import match
-from app.services.trust_checker import analyze
+from app.integrations import member1
 from app.repositories import documents
 
 
 class State(TypedDict, total=False):
     owner: str
+    job_id: str | None
     goal_id: str
     goal: str
     profile: dict
@@ -33,6 +35,10 @@ class State(TypedDict, total=False):
 
 def stopped(state):
     with Session() as db:
+        if state.get("job_id"):
+            job = db.get(Job, state["job_id"])
+            if not job or job.owner_id != state["owner"] or job.status == "CANCELLED":
+                return True
         row = db.scalar(
             select(CareerGoal).where(
                 CareerGoal.id == state["goal_id"], CareerGoal.owner_id == state["owner"]
@@ -54,8 +60,14 @@ def catalog_node(state):
         return {"stopped": True}
     candidates = []
     for item in documents.scan("opportunities", limit=50):
+        if stopped(state):
+            return {"stopped": True}
         candidates.append(
-            dict(id=item["id"], matching=match(state["profile"], item), risk=analyze(item))
+            dict(
+                id=item["id"],
+                matching=match(state["profile"], item),
+                risk=member1.analyze_trust(item),
+            )
         )
     candidates.sort(key=lambda c: -c["matching"]["score"])
     return {"candidates": candidates[:10]}
@@ -161,7 +173,7 @@ def setup_checkpoints():
         checkpoint.setup()
 
 
-def run(goal_id, owner):
+def run(goal_id, owner, job_id=None):
     with Session() as lock_db:
         if settings.hosted:
             lock_db.execute(
@@ -185,6 +197,7 @@ def run(goal_id, owner):
                     None
                     if previous.values
                     else dict(
+                        job_id=job_id,
                         owner=owner,
                         goal_id=goal_id,
                         goal=row.payload["goal"],
@@ -192,6 +205,13 @@ def run(goal_id, owner):
                     ),
                     config,
                 )
+        # Fence final effects against the same execution cancellation row as the cancel route.
+        if job_id:
+            execution = lock_db.scalar(
+                select(Job).where(Job.id == job_id, Job.owner_id == owner).with_for_update()
+            )
+            if not execution or execution.status == "CANCELLED":
+                return {"status": "CANCELLED"}
         lock_db.expire_all()
         row = lock_db.scalar(
             select(CareerGoal)

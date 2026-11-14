@@ -7,6 +7,7 @@ Only typed, stored requirements become rules; clients cannot submit executable c
 from app.services.eligibility_engine import Criterion, EligibilityEngine, Operator, Scheme
 from app.schemas.eligibility import EligibilityEvaluationResponse
 from app.utils.validators import normalized
+from app.integrations.profile import eligibility_profile
 
 
 def evaluate_opportunity(profile, opportunity):
@@ -38,7 +39,7 @@ def evaluate_opportunity(profile, opportunity):
                     value=list(normalized(requirements["required_skills"])),
                 )
             )
-    candidate = dict(profile)
+    candidate = eligibility_profile(profile)
     for field in ("graduation_year", "degree", "branch", "location"):
         if candidate.get(field) is not None:
             candidate[field] = str(candidate[field]).casefold()

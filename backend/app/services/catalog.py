@@ -14,7 +14,9 @@ def digest(value):
 
 
 def create_opportunity(data):
-    data = dict(data)
+    from app.schemas.opportunity import OpportunityInput
+
+    data = OpportunityInput.model_validate(data).model_dump(mode="json")
     for key in ("application_url", "source_url", "company_url"):
         data[key] = canonical_url(data.get(key))
     fingerprint = digest(

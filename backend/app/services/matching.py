@@ -1,8 +1,17 @@
 """Deterministic ranking; unknown factors remain null and contribute zero."""
 
+from datetime import date
 from app.utils.validators import normalized
 
 from app.config import settings
+from app.integrations.profile import eligibility_profile
+
+
+def is_open(opportunity):
+    deadline = opportunity.get("deadline")
+    return opportunity.get("verification_status") != "EXPIRED" and (
+        not deadline or date.fromisoformat(str(deadline)) >= date.today()
+    )
 
 
 def compare_skills(skills, requirements):
@@ -22,6 +31,7 @@ def compare_skills(skills, requirements):
 
 
 def match(profile, opportunity):
+    profile = eligibility_profile(profile)
     requirements = opportunity.get("requirements", {})
     checks = []
 
@@ -97,6 +107,6 @@ def match(profile, opportunity):
         score=round(sum((factors[k] or 0) * w for k, w in settings.match_weights.items()), 4),
         data_coverage=sum(w for k, w in settings.match_weights.items() if factors[k] is not None),
         skill_analysis=analysis,
-        recommendable=status == "ELIGIBLE",
+        recommendable=status == "ELIGIBLE" and is_open(opportunity),
         explanation="Eligibility is independent of ranking. Learning measures missing preferred skills, not proficiency.",
     )

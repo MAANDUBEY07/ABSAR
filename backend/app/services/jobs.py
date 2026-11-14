@@ -15,6 +15,24 @@ from app.services.catalog import digest
 def enqueue(db, owner, kind, arguments, dedupe=None):
     key = dedupe or digest([kind, arguments])
     old = db.scalar(select(Job).where(Job.owner_id == owner, Job.dedupe_key == key))
+    if (
+        old
+        and kind == "discovery"
+        and dedupe is None
+        and old.status in {"COMPLETED", "DEAD_LETTER", "CANCELLED"}
+    ):
+        # Release the unique active key atomically; terminal jobs keep their identity/history.
+        db.execute(
+            update(Job)
+            .where(
+                Job.id == old.id,
+                Job.dedupe_key == key,
+                Job.status.in_(["COMPLETED", "DEAD_LETTER", "CANCELLED"]),
+            )
+            .values(dedupe_key="archived:" + old.id)
+        )
+        db.commit()
+        old = db.scalar(select(Job).where(Job.owner_id == owner, Job.dedupe_key == key))
     if old:
         return old
     row = Job(
@@ -34,7 +52,8 @@ def enqueue(db, owner, kind, arguments, dedupe=None):
 
 
 def dispatch():
-    from app.worker import execute_job
+    if not settings.jobs_eager:
+        from app.worker import execute_job
 
     with Session() as db:
         # Dispatch may happen more than once. execute() claims by atomic status/lease predicate.
@@ -66,6 +85,8 @@ def execute(job_id):
         attempt = row.attempts
         kind, args, owner = row.payload["kind"], row.payload["arguments"], row.owner_id
     try:
+        if kind == "career":
+            args = dict(args, _execution_job_id=job_id)
         result = perform(kind, args, owner)
         with Session.begin() as db:
             row = db.scalar(select(Job).where(Job.id == job_id).with_for_update())
@@ -75,7 +96,9 @@ def execute(job_id):
                 update(Job)
                 .where(Job.id == job_id, Job.status == "RUNNING", Job.attempts == attempt)
                 .values(
-                    payload=dict(row.payload, result=result), status="COMPLETED", lease_until=None
+                    payload=dict(row.payload, result=result, error=None),
+                    status="COMPLETED",
+                    lease_until=None,
                 ),
                 execution_options={"synchronize_session": False},
             )
@@ -90,6 +113,21 @@ def execute(job_id):
             row.payload = dict(
                 row.payload, error="Operation failed; inspect sanitized operational diagnostics"
             )
+            if kind == "notice":
+                from app.repositories import documents
+
+                documents.transition(
+                    "extracted_notices",
+                    args["document_id"],
+                    owner,
+                    {"UPLOADED", "PROCESSING", "RETRY"},
+                    dict(
+                        status="FAILED" if row.status == "DEAD_LETTER" else "RETRY",
+                        error="Notice extraction failed; retry pending"
+                        if row.status == "RETRY"
+                        else "Notice extraction failed",
+                    ),
+                )
             if row.status == "RETRY":
                 db.add(
                     Outbox(
@@ -131,7 +169,7 @@ def perform(kind, args, owner):
         import base64
         from app.repositories import documents
         from app.utils.file_handler import notice_draft, extract
-        from app.services.resume_analyzer import analyze_resume
+        from app.integrations import member1
         from app.models.persistent import Document
 
         with Session() as db:
@@ -147,27 +185,35 @@ def perform(kind, args, owner):
             )
             if prior and (kind == "resume" or prior.get("status") in {"NEEDS_REVIEW", "CONFIRMED"}):
                 return prior
-            parsed = extract(
-                base64.b64decode(row.payload["content_base64"]),
-                row.payload["filename"],
-                resume=kind == "resume",
-            )
+            source = base64.b64decode(row.payload["content_base64"])
+            ai_notice = None
+            if kind == "notice" and settings.ai_provider != "deterministic":
+                from app.integrations.notice import extract_draft
+
+                ai_notice = extract_draft(source, row.payload["filename"])
+                parsed = {key: ai_notice[key] for key in ("text", "warnings", "page_count")}
+            else:
+                parsed = extract(source, row.payload["filename"], resume=kind == "resume")
             row.payload = dict(row.payload, **parsed)
             db.commit()
             if kind == "resume":
-                result = analyze_resume(parsed["text"], owner, row.id)
+                result = member1.analyze_resume(parsed["text"], owner, row.id)
                 return documents.put("skill_analysis", row.id, result)
             result = dict(
                 owner_id=owner,
                 status="NEEDS_REVIEW",
-                draft=notice_draft(parsed["text"]),
+                draft=ai_notice["draft"] if ai_notice else notice_draft(parsed["text"]),
                 warnings=parsed["warnings"],
+                error=None,
             )
-            return documents.put("extracted_notices", row.id, result)
+            documents.transition(
+                "extracted_notices", row.id, owner, {"UPLOADED", "PROCESSING", "RETRY"}, result
+            )
+            return documents.get("extracted_notices", row.id, owner)
     if kind == "discovery":
-        from app.services.scraper import discover_feed
+        from app.integrations import member1
 
-        return discover_feed(args["feed_url"], owner)
+        return member1.discover_feed(args["feed_url"], owner)
     if kind == "judge0":
         from app.services.judge0 import execute as judge
 
@@ -175,5 +221,5 @@ def perform(kind, args, owner):
     if kind == "career":
         from app.services.career import run
 
-        return run(args["goal_id"], owner)
+        return run(args["goal_id"], owner, job_id=args.get("_execution_job_id"))
     raise ValueError("Unsupported job type")

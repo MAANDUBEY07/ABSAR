@@ -14,10 +14,11 @@ router = APIRouter()
 @router.get("/profile")
 @router.get("/profile/me")
 def profile(owner: Owner, db: DB):
+    payload = owned(db, Profile, owner, owner).payload
     return ok(
-        ProfileResponse.model_validate(owned(db, Profile, owner, owner).payload).model_dump(
-            mode="json"
-        )
+        ProfileResponse.model_validate(
+            dict(payload, id=owner, email=payload.get("notification_email"))
+        ).model_dump(mode="json")
     )
 
 
@@ -31,11 +32,20 @@ def update_profile(body: ProfileInput, owner: Owner, db: DB):
     row.payload = dict(data, notification_email=row.payload.get("notification_email"))
     for model, values in (
         (Skill, data["skills"] or []),
-        (Education, data["education"]),
+        (
+            Education,
+            [data["education"]]
+            if isinstance(data["education"], dict)
+            else (data["education"] or []),
+        ),
         (Preference, [data["preferences"]]),
     ):
         db.execute(delete(model).where(model.owner_id == owner))
         for value in values:
             db.add(model(owner_id=owner, payload={"value": value}))
     db.commit()
-    return ok(ProfileResponse.model_validate(row.payload).model_dump(mode="json"))
+    return ok(
+        ProfileResponse.model_validate(
+            dict(row.payload, id=owner, email=row.payload.get("notification_email"))
+        ).model_dump(mode="json")
+    )

@@ -27,6 +27,8 @@ def list_opportunities(
     state: str | None = None,
     search: str | None = Query(None, max_length=300),
 ):
+    if category == "coding_challenge":
+        category = "coding_competition"
     candidates = documents.scan("opportunities", limit=501)
     result = []
     for record in candidates[:500]:
