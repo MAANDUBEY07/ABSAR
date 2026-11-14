@@ -24,8 +24,8 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-# Currently verified, supported, low-latency Gemini model in Google GenAI API
-DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
+# Operators must select a model available to their own account.
+DEFAULT_GEMINI_MODEL = ""
 
 # Request timeout in milliseconds (30 seconds)
 DEFAULT_TIMEOUT_MS = 30000
@@ -65,33 +65,9 @@ class ExtractedOpportunity(BaseModel):
 
 def _sanitize_error_message(error: Exception, api_key: str | None, model_name: str) -> str:
     """Removes sensitive credentials and generates actionable error descriptions."""
-    raw = str(error)
-    if api_key and len(api_key) > 5 and api_key in raw:
-        raw = raw.replace(api_key, "[REDACTED_API_KEY]")
-
-    if "504" in raw or "DEADLINE_EXCEEDED" in raw:
-        return (
-            f"Gemini API request timed out (504 DEADLINE_EXCEEDED). "
-            f"The model '{model_name}' may be experiencing high latency or upstream queuing. "
-            f"Details: {raw}"
-        )
-    if "404" in raw or "NOT_FOUND" in raw:
-        return (
-            f"Gemini model '{model_name}' was not found or is no longer available (404 NOT_FOUND). "
-            f"Please update GEMINI_MODEL in .env to a supported model such as '{DEFAULT_GEMINI_MODEL}'. "
-            f"Details: {raw}"
-        )
-    if "429" in raw or "RESOURCE_EXHAUSTED" in raw:
-        return (
-            f"Gemini API rate limit or quota exceeded (429 RESOURCE_EXHAUSTED). "
-            f"Please wait before retrying. Details: {raw}"
-        )
-    if "401" in raw or "403" in raw or "API_KEY_INVALID" in raw or "PERMISSION_DENIED" in raw:
-        return (
-            f"Gemini API authentication failed. "
-            f"Please verify that GEMINI_API_KEY in .env is valid and active. Details: {raw}"
-        )
-    return raw
+    return (
+        "Gemini provider request failed; verify credentials, model access, quota and connectivity"
+    )
 
 
 def get_gemini_client(api_key: str, timeout_ms: int = DEFAULT_TIMEOUT_MS) -> genai.Client:
@@ -141,20 +117,17 @@ def extract_opportunity(
         raise ValueError("Notice text cannot be empty.")
 
     if len(notice_text) > 30000:
-        raise ValueError(
-            "Notice text exceeds the maximum limit of 30,000 characters."
-        )
+        raise ValueError("Notice text exceeds the maximum limit of 30,000 characters.")
 
     api_key = os.getenv("GEMINI_API_KEY")
 
     if not api_key:
-        raise RuntimeError(
-            "GEMINI_API_KEY is missing from the environment."
-        )
+        raise RuntimeError("GEMINI_API_KEY is missing from the environment.")
 
     model_name = os.getenv("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL
 
-    client = get_gemini_client(api_key=api_key, timeout_ms=DEFAULT_TIMEOUT_MS)
+    if not model_name:
+        raise RuntimeError("GEMINI_MODEL must be configured for your account")
 
     prompt = f"""
 You are AVSAR's opportunity information extraction system.
@@ -182,6 +155,7 @@ NOTICE TEXT:
 """
 
     try:
+        client = get_gemini_client(api_key=api_key, timeout_ms=DEFAULT_TIMEOUT_MS)
         response = client.models.generate_content(
             model=model_name,
             contents=prompt,
@@ -196,9 +170,7 @@ NOTICE TEXT:
             if isinstance(response.parsed, ExtractedOpportunity):
                 return response.parsed
 
-            return ExtractedOpportunity.model_validate(
-                response.parsed
-            )
+            return ExtractedOpportunity.model_validate(response.parsed)
 
         if not response.text:
             raise ValueError("Gemini returned an empty response.")
@@ -207,18 +179,12 @@ NOTICE TEXT:
 
         return ExtractedOpportunity.model_validate(extracted_data)
 
-    except ValidationError as error:
-        raise ValueError(
-            f"Extracted opportunity data failed validation: {error}"
-        ) from error
+    except ValidationError:
+        raise ValueError("Extracted opportunity data failed validation") from None
 
-    except json.JSONDecodeError as error:
-        raise ValueError(
-            "Gemini returned invalid JSON."
-        ) from error
+    except json.JSONDecodeError:
+        raise ValueError("Gemini returned invalid JSON.") from None
 
     except Exception as error:
         clean_msg = _sanitize_error_message(error, api_key, model_name)
-        raise RuntimeError(
-            f"Opportunity extraction failed: {clean_msg}"
-        ) from error
+        raise RuntimeError(f"Opportunity extraction failed: {clean_msg}") from None

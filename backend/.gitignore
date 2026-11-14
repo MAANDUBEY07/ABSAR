@@ -1,0 +1,4 @@
+*.db
+*.sqlite*
+.ruff_cache/
+test-output*.txt

@@ -1,1 +1,1 @@
-"""API routes and endpoints package."""
+"""HTTP routers organized by the AVSAR backend chart."""

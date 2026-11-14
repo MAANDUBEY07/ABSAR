@@ -10,7 +10,7 @@ Reusable duplicate detection service for AVSAR opportunities using:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date, datetime
 import hashlib
 import re
@@ -22,6 +22,7 @@ from rapidfuzz import fuzz
 # ---------------------------------------------------------------------------
 # Configuration & Result Models
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class DuplicateDetectorConfig:
@@ -71,9 +72,7 @@ class DuplicateDetectorConfig:
         }
         for name, weight in weights.items():
             if not isinstance(weight, (int, float)) or weight < 0.0:
-                raise ValueError(
-                    f"Invalid {name}: weight must be non-negative, got {weight}"
-                )
+                raise ValueError(f"Invalid {name}: weight must be non-negative, got {weight}")
 
         total_weight = sum(weights.values())
         if abs(total_weight - 1.0) > 1e-5:
@@ -116,6 +115,7 @@ class DuplicateComparisonResult:
 # ---------------------------------------------------------------------------
 # Text & Date Normalization Utilities
 # ---------------------------------------------------------------------------
+
 
 def normalize_text(text: Any) -> str:
     """
@@ -203,11 +203,23 @@ def compare_deadlines(d1_val: Any, d2_val: Any) -> Tuple[Optional[float], bool, 
         if days_diff == 0:
             return 1.0, False, f"Deadlines are identical ({norm1})"
         elif days_diff <= 2:
-            return 0.9, False, f"Deadlines are very close ({days_diff} days apart: {norm1} vs {norm2})"
+            return (
+                0.9,
+                False,
+                f"Deadlines are very close ({days_diff} days apart: {norm1} vs {norm2})",
+            )
         elif days_diff <= 7:
-            return 0.7, False, f"Deadlines are within one week ({days_diff} days apart: {norm1} vs {norm2})"
+            return (
+                0.7,
+                False,
+                f"Deadlines are within one week ({days_diff} days apart: {norm1} vs {norm2})",
+            )
         else:
-            return 0.0, True, f"Deadlines conflict ({norm1} vs {norm2}, difference of {days_diff} days)"
+            return (
+                0.0,
+                True,
+                f"Deadlines conflict ({norm1} vs {norm2}, difference of {days_diff} days)",
+            )
 
     # Fallback to normalized text comparison for non-standard date strings
     text1 = normalize_text(d1_val)
@@ -226,6 +238,7 @@ def compare_deadlines(d1_val: Any, d2_val: Any) -> Tuple[Optional[float], bool, 
 # ---------------------------------------------------------------------------
 # Core Duplicate Detection Functions
 # ---------------------------------------------------------------------------
+
 
 def generate_content_hash(opportunity: Dict[str, Any]) -> str:
     """
@@ -420,7 +433,8 @@ def compare_opportunities(
                 confidence_score=title_sim * 0.70,  # Discounted confidence
                 field_scores=field_scores,
                 explanation="Suspected duplicate based on title, but requires review due to missing organization and details.",
-                reasons=reasons + ["Title similarity alone is insufficient for automatic duplicate confirmation."],
+                reasons=reasons
+                + ["Title similarity alone is insufficient for automatic duplicate confirmation."],
                 requires_review=True,
                 deadline_conflict=False,
                 candidate_id=cand_id,
@@ -436,7 +450,9 @@ def compare_opportunities(
     elif confidence_score >= cfg.suspected_threshold:
         is_duplicate = False
         requires_review = True
-        explanation = f"Potential duplicate detected requiring review (confidence: {confidence_score:.1%})."
+        explanation = (
+            f"Potential duplicate detected requiring review (confidence: {confidence_score:.1%})."
+        )
     else:
         is_duplicate = False
         explanation = f"Distinct opportunity (confidence: {confidence_score:.1%})."
@@ -483,6 +499,7 @@ def find_duplicates(
 # ---------------------------------------------------------------------------
 # Reusable Service Class
 # ---------------------------------------------------------------------------
+
 
 class DuplicateDetector:
     """Service class encapsulating duplicate detection with configured settings."""

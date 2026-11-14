@@ -22,13 +22,10 @@ from datetime import date, timedelta
 # Ensure project root is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from backend.app.services.eligibility_engine import (
+from app.services.eligibility_engine import (
     APIEligibilityStatus,
-    CandidateProfile,
     Criterion,
-    CriterionResult,
     EligibilityEngine,
-    EligibilityResult,
     EligibilityStatus,
     LogicalCombinator,
     Operator,
@@ -99,7 +96,9 @@ class TestEligibilityEngineBasicOperators(unittest.TestCase):
         self.assertFalse(self.engine.evaluate_criterion({"age": 26}, between_crit).passed)
 
     def test_in_and_not_in(self):
-        crit_in = Criterion(field="state", operator=Operator.IN, value=["Bihar", "Uttar Pradesh", "Jharkhand"])
+        crit_in = Criterion(
+            field="state", operator=Operator.IN, value=["Bihar", "Uttar Pradesh", "Jharkhand"]
+        )
         crit_not_in = Criterion(field="state", operator=Operator.NOT_IN, value=["Delhi", "Goa"])
 
         self.assertTrue(self.engine.evaluate_criterion({"state": "bihar"}, crit_in).passed)
@@ -110,42 +109,84 @@ class TestEligibilityEngineBasicOperators(unittest.TestCase):
         self.assertFalse(self.engine.evaluate_criterion({"state": "delhi"}, crit_not_in).passed)
 
     def test_contains_and_not_contains(self):
-        crit_contains_str = Criterion(field="degree", operator=Operator.CONTAINS, value="Engineering")
+        crit_contains_str = Criterion(
+            field="degree", operator=Operator.CONTAINS, value="Engineering"
+        )
         crit_contains_list = Criterion(field="skills", operator=Operator.CONTAINS, value="Python")
 
-        self.assertTrue(self.engine.evaluate_criterion({"degree": "Bachelor of Engineering (B.E.)"}, crit_contains_str).passed)
-        self.assertFalse(self.engine.evaluate_criterion({"degree": "Bachelor of Arts"}, crit_contains_str).passed)
+        self.assertTrue(
+            self.engine.evaluate_criterion(
+                {"degree": "Bachelor of Engineering (B.E.)"}, crit_contains_str
+            ).passed
+        )
+        self.assertFalse(
+            self.engine.evaluate_criterion({"degree": "Bachelor of Arts"}, crit_contains_str).passed
+        )
 
-        self.assertTrue(self.engine.evaluate_criterion({"skills": ["Java", "python", "SQL"]}, crit_contains_list).passed)
-        self.assertFalse(self.engine.evaluate_criterion({"skills": ["Java", "C++"]}, crit_contains_list).passed)
+        self.assertTrue(
+            self.engine.evaluate_criterion(
+                {"skills": ["Java", "python", "SQL"]}, crit_contains_list
+            ).passed
+        )
+        self.assertFalse(
+            self.engine.evaluate_criterion({"skills": ["Java", "C++"]}, crit_contains_list).passed
+        )
 
     def test_set_operations_any_all_none(self):
-        crit_any = Criterion(field="skills", operator=Operator.ANY_OF, value=["Python", "Go", "Rust"])
-        crit_all = Criterion(field="qualifications", operator=Operator.ALL_OF, value=["10th", "12th"])
-        crit_none = Criterion(field="criminal_records", operator=Operator.NONE_OF, value=["convicted", "pending"])
+        crit_any = Criterion(
+            field="skills", operator=Operator.ANY_OF, value=["Python", "Go", "Rust"]
+        )
+        crit_all = Criterion(
+            field="qualifications", operator=Operator.ALL_OF, value=["10th", "12th"]
+        )
+        crit_none = Criterion(
+            field="criminal_records", operator=Operator.NONE_OF, value=["convicted", "pending"]
+        )
 
-        self.assertTrue(self.engine.evaluate_criterion({"skills": ["Python", "JavaScript"]}, crit_any).passed)
-        self.assertFalse(self.engine.evaluate_criterion({"skills": ["Java", "PHP"]}, crit_any).passed)
+        self.assertTrue(
+            self.engine.evaluate_criterion({"skills": ["Python", "JavaScript"]}, crit_any).passed
+        )
+        self.assertFalse(
+            self.engine.evaluate_criterion({"skills": ["Java", "PHP"]}, crit_any).passed
+        )
 
-        self.assertTrue(self.engine.evaluate_criterion({"qualifications": ["10th", "12th", "B.Tech"]}, crit_all).passed)
-        self.assertFalse(self.engine.evaluate_criterion({"qualifications": ["10th"]}, crit_all).passed)
+        self.assertTrue(
+            self.engine.evaluate_criterion(
+                {"qualifications": ["10th", "12th", "B.Tech"]}, crit_all
+            ).passed
+        )
+        self.assertFalse(
+            self.engine.evaluate_criterion({"qualifications": ["10th"]}, crit_all).passed
+        )
 
-        self.assertTrue(self.engine.evaluate_criterion({"criminal_records": ["cleared"]}, crit_none).passed)
-        self.assertFalse(self.engine.evaluate_criterion({"criminal_records": ["convicted"]}, crit_none).passed)
+        self.assertTrue(
+            self.engine.evaluate_criterion({"criminal_records": ["cleared"]}, crit_none).passed
+        )
+        self.assertFalse(
+            self.engine.evaluate_criterion({"criminal_records": ["convicted"]}, crit_none).passed
+        )
 
     def test_exists_and_not_exists(self):
         crit_exists = Criterion(field="income_certificate", operator=Operator.EXISTS)
         crit_not_exists = Criterion(field="disqualification_flag", operator=Operator.NOT_EXISTS)
 
-        self.assertTrue(self.engine.evaluate_criterion({"income_certificate": "DOC1234"}, crit_exists).passed)
-        self.assertFalse(self.engine.evaluate_criterion({"income_certificate": None}, crit_exists).passed)
+        self.assertTrue(
+            self.engine.evaluate_criterion({"income_certificate": "DOC1234"}, crit_exists).passed
+        )
+        self.assertFalse(
+            self.engine.evaluate_criterion({"income_certificate": None}, crit_exists).passed
+        )
         self.assertFalse(self.engine.evaluate_criterion({}, crit_exists).passed)
 
         self.assertTrue(self.engine.evaluate_criterion({}, crit_not_exists).passed)
-        self.assertFalse(self.engine.evaluate_criterion({"disqualification_flag": True}, crit_not_exists).passed)
+        self.assertFalse(
+            self.engine.evaluate_criterion({"disqualification_flag": True}, crit_not_exists).passed
+        )
 
     def test_regex_match(self):
-        crit = Criterion(field="pan_number", operator=Operator.REGEX_MATCH, value=r"^[A-Z]{5}[0-9]{4}[A-Z]$")
+        crit = Criterion(
+            field="pan_number", operator=Operator.REGEX_MATCH, value=r"^[A-Z]{5}[0-9]{4}[A-Z]$"
+        )
 
         self.assertTrue(self.engine.evaluate_criterion({"pan_number": "ABCDE1234F"}, crit).passed)
         self.assertFalse(self.engine.evaluate_criterion({"pan_number": "INVALID123"}, crit).passed)
@@ -163,7 +204,7 @@ class TestEligibilityEngineBasicOperators(unittest.TestCase):
             field="word",
             operator=Operator.CUSTOM,
             custom_fn=lambda act, exp: len(act) > exp,
-            value=4
+            value=4,
         )
         self.assertTrue(self.engine.evaluate_criterion({"word": "opportunity"}, crit_fn).passed)
         self.assertFalse(self.engine.evaluate_criterion({"word": "job"}, crit_fn).passed)
@@ -175,27 +216,22 @@ class TestNestedFieldResolutionAndAge(unittest.TestCase):
 
     def test_nested_dot_notation(self):
         candidate = {
-            "personal": {
-                "demographics": {
-                    "gender": "Female",
-                    "caste": "OBC"
-                }
-            },
-            "education": {
-                "secondary": {
-                    "marks": 92.5
-                }
-            },
+            "personal": {"demographics": {"gender": "Female", "caste": "OBC"}},
+            "education": {"secondary": {"marks": 92.5}},
             "skills": [
                 {"name": "Python", "level": "Expert"},
-                {"name": "Django", "level": "Intermediate"}
-            ]
+                {"name": "Django", "level": "Intermediate"},
+            ],
         }
 
-        crit1 = Criterion(field="personal.demographics.gender", operator=Operator.EQUALS, value="Female")
+        crit1 = Criterion(
+            field="personal.demographics.gender", operator=Operator.EQUALS, value="Female"
+        )
         self.assertTrue(self.engine.evaluate_criterion(candidate, crit1).passed)
 
-        crit2 = Criterion(field="education.secondary.marks", operator=Operator.GREATER_THAN_OR_EQUAL, value=90)
+        crit2 = Criterion(
+            field="education.secondary.marks", operator=Operator.GREATER_THAN_OR_EQUAL, value=90
+        )
         self.assertTrue(self.engine.evaluate_criterion(candidate, crit2).passed)
 
         # List indexing
@@ -207,10 +243,7 @@ class TestNestedFieldResolutionAndAge(unittest.TestCase):
         twenty_years_ago = today - timedelta(days=20 * 365 + 5)
         dob_str = twenty_years_ago.strftime("%Y-%m-%d")
 
-        candidate = {
-            "name": "Aman",
-            "dob": dob_str
-        }
+        candidate = {"name": "Aman", "dob": dob_str}
 
         # Age criterion should automatically resolve age from dob
         age_crit = Criterion(field="age", operator=Operator.GREATER_THAN_OR_EQUAL, value=18)
@@ -250,12 +283,27 @@ class TestFullSchemeEvaluation(unittest.TestCase):
             criteria=[
                 EligibilityEngine.build_age_criterion(min_age=17, max_age=25, mandatory=True),
                 EligibilityEngine.build_income_criterion(max_annual_income=250000, mandatory=True),
-                EligibilityEngine.build_caste_category_criterion(["SC", "ST", "OBC", "EWS"], mandatory=True),
-                Criterion(field="education.percentage", operator=Operator.GREATER_THAN_OR_EQUAL, value=60.0, mandatory=True, description="Min 60% marks"),
+                EligibilityEngine.build_caste_category_criterion(
+                    ["SC", "ST", "OBC", "EWS"], mandatory=True
+                ),
+                Criterion(
+                    field="education.percentage",
+                    operator=Operator.GREATER_THAN_OR_EQUAL,
+                    value=60.0,
+                    mandatory=True,
+                    description="Min 60% marks",
+                ),
                 # Optional preference: Female candidates get preference/bonus score
-                Criterion(field="gender", operator=Operator.EQUALS, value="Female", mandatory=False, weight=2.0, description="Preference for female candidates"),
+                Criterion(
+                    field="gender",
+                    operator=Operator.EQUALS,
+                    value="Female",
+                    mandatory=False,
+                    weight=2.0,
+                    description="Preference for female candidates",
+                ),
             ],
-            min_score=80.0
+            min_score=80.0,
         )
 
     def test_fully_eligible_candidate(self):
@@ -265,7 +313,7 @@ class TestFullSchemeEvaluation(unittest.TestCase):
             "annual_income": 180000,
             "category": "OBC",
             "education": {"percentage": 78.5},
-            "gender": "Female"
+            "gender": "Female",
         }
 
         result = self.engine.evaluate(candidate, self.scholarship_scheme)
@@ -282,7 +330,7 @@ class TestFullSchemeEvaluation(unittest.TestCase):
             "annual_income": 150000,
             "category": "SC",
             "education": {"percentage": 65.0},
-            "gender": "Male"  # Fails optional female preference (weight 2.0)
+            "gender": "Male",  # Fails optional female preference (weight 2.0)
         }
 
         # 4 mandatory criteria with weight 1.0 each = 4.0; optional female preference weight 2.0. Total = 6.0
@@ -305,7 +353,7 @@ class TestFullSchemeEvaluation(unittest.TestCase):
             "annual_income": 500000,  # Income exceeds 2.5 LPA
             "category": "SC",
             "education": {"percentage": 75.0},
-            "gender": "Male"
+            "gender": "Male",
         }
 
         result = self.engine.evaluate(candidate, self.scholarship_scheme)
@@ -318,12 +366,7 @@ class TestFullSchemeEvaluation(unittest.TestCase):
 
     def test_incomplete_profile_missing_fields(self):
         # Candidate has not provided income and education details
-        candidate = {
-            "name": "Sneha",
-            "age": 19,
-            "category": "ST",
-            "gender": "Female"
-        }
+        candidate = {"name": "Sneha", "age": 19, "category": "ST", "gender": "Female"}
 
         result = self.engine.evaluate(candidate, self.scholarship_scheme)
         self.assertFalse(result.is_eligible)
@@ -344,28 +387,24 @@ class TestCompositeRuleGroups(unittest.TestCase):
             combinator=LogicalCombinator.AND,
             rules=[
                 Criterion(field="domicile_state", operator=Operator.EQUALS, value="Bihar"),
-                Criterion(field="category", operator=Operator.IN, value=["SC", "ST"])
+                Criterion(field="category", operator=Operator.IN, value=["SC", "ST"]),
             ],
-            description="Bihar SC/ST affirmative quota"
+            description="Bihar SC/ST affirmative quota",
         )
         low_income_rule = Criterion(
             field="annual_income",
             operator=Operator.LESS_THAN_OR_EQUAL,
             value=100000,
-            description="BPL income threshold"
+            description="BPL income threshold",
         )
 
         composite_rule = RuleGroup(
             combinator=LogicalCombinator.OR,
             rules=[bihar_affirmative, low_income_rule],
-            description="Eligible via quota OR income threshold"
+            description="Eligible via quota OR income threshold",
         )
 
-        scheme = Scheme(
-            id="SCHEME_OR_01",
-            title="State Welfare Grant",
-            criteria=[composite_rule]
-        )
+        scheme = Scheme(id="SCHEME_OR_01", title="State Welfare Grant", criteria=[composite_rule])
 
         # Candidate 1: Qualifies via Bihar + SC (even though income is high)
         cand1 = {"domicile_state": "Bihar", "category": "SC", "annual_income": 400000}
@@ -389,14 +428,16 @@ class TestCompositeRuleGroups(unittest.TestCase):
             rules=[
                 Criterion(field="employment_type", operator=Operator.EQUALS, value="Government")
             ],
-            description="Must not be currently employed in government service"
+            description="Must not be currently employed in government service",
         )
 
         scheme = Scheme(id="SCHEME_NOT_01", title="Youth Training", criteria=[not_gov_employee])
 
         self.assertTrue(self.engine.evaluate({"employment_type": "Private"}, scheme).is_eligible)
         self.assertTrue(self.engine.evaluate({"employment_type": "Unemployed"}, scheme).is_eligible)
-        self.assertFalse(self.engine.evaluate({"employment_type": "Government"}, scheme).is_eligible)
+        self.assertFalse(
+            self.engine.evaluate({"employment_type": "Government"}, scheme).is_eligible
+        )
 
 
 class TestBatchFilteringAndGapAnalysis(unittest.TestCase):
@@ -408,9 +449,11 @@ class TestBatchFilteringAndGapAnalysis(unittest.TestCase):
             title="Artisan Support Scheme",
             criteria=[
                 Criterion(field="occupation", operator=Operator.EQUALS, value="Artisan"),
-                Criterion(field="annual_income", operator=Operator.LESS_THAN_OR_EQUAL, value=200000)
+                Criterion(
+                    field="annual_income", operator=Operator.LESS_THAN_OR_EQUAL, value=200000
+                ),
             ],
-            min_score=100.0
+            min_score=100.0,
         )
         self.scheme2 = Scheme(
             id="S2",
@@ -418,18 +461,26 @@ class TestBatchFilteringAndGapAnalysis(unittest.TestCase):
             criteria=[
                 Criterion(field="gender", operator=Operator.EQUALS, value="Female"),
                 Criterion(field="age", operator=Operator.BETWEEN, value=[21, 50]),
-                Criterion(field="business_registered", operator=Operator.EQUALS, value=True, mandatory=False, weight=1.0)
+                Criterion(
+                    field="business_registered",
+                    operator=Operator.EQUALS,
+                    value=True,
+                    mandatory=False,
+                    weight=1.0,
+                ),
             ],
-            min_score=66.0
+            min_score=66.0,
         )
         self.scheme3 = Scheme(
             id="S3",
             title="Graduate IT Fellowship",
             criteria=[
-                Criterion(field="education.degree", operator=Operator.IN, value=["B.Tech", "B.E.", "MCA"]),
-                Criterion(field="skills", operator=Operator.CONTAINS, value="Python")
+                Criterion(
+                    field="education.degree", operator=Operator.IN, value=["B.Tech", "B.E.", "MCA"]
+                ),
+                Criterion(field="skills", operator=Operator.CONTAINS, value="Python"),
             ],
-            min_score=100.0
+            min_score=100.0,
         )
 
     def test_filter_eligible_opportunities(self):
@@ -440,7 +491,7 @@ class TestBatchFilteringAndGapAnalysis(unittest.TestCase):
             "occupation": "Artisan",
             "annual_income": 150000,
             "education": {"degree": "B.A."},
-            "business_registered": False
+            "business_registered": False,
         }
 
         eligible_schemes = self.engine.filter_eligible_opportunities(
@@ -461,7 +512,7 @@ class TestBatchFilteringAndGapAnalysis(unittest.TestCase):
     def test_gap_analysis(self):
         candidate = {
             "gender": "Male",
-            "age": 30
+            "age": 30,
             # Missing business_registered
         }
 
@@ -474,7 +525,9 @@ class TestBatchFilteringAndGapAnalysis(unittest.TestCase):
 
 class TestSerializationAndBuilders(unittest.TestCase):
     def test_criterion_and_scheme_serialization(self):
-        c = Criterion(field="age", operator=Operator.BETWEEN, value=[18, 30], mandatory=True, weight=2.5)
+        c = Criterion(
+            field="age", operator=Operator.BETWEEN, value=[18, 30], mandatory=True, weight=2.5
+        )
         c_dict = c.to_dict()
         c_restored = Criterion.from_dict(c_dict)
         self.assertEqual(c.field, c_restored.field)
@@ -487,7 +540,7 @@ class TestSerializationAndBuilders(unittest.TestCase):
             title="Test Scheme",
             criteria=[c],
             min_score=90.0,
-            metadata={"department": "Ministry of Skill Development"}
+            metadata={"department": "Ministry of Skill Development"},
         )
         s_dict = scheme.to_dict()
         s_restored = Scheme.from_dict(s_dict)
@@ -527,8 +580,12 @@ class TestFourStatusMapping(unittest.TestCase):
             id="SCH_ELIGIBLE",
             title="Eligible Test Scheme",
             criteria=[
-                Criterion(field="age", operator=Operator.GREATER_THAN_OR_EQUAL, value=18, mandatory=True),
-                Criterion(field="domicile_state", operator=Operator.EQUALS, value="Bihar", mandatory=True),
+                Criterion(
+                    field="age", operator=Operator.GREATER_THAN_OR_EQUAL, value=18, mandatory=True
+                ),
+                Criterion(
+                    field="domicile_state", operator=Operator.EQUALS, value="Bihar", mandatory=True
+                ),
             ],
             min_score=100.0,
         )
@@ -547,7 +604,9 @@ class TestFourStatusMapping(unittest.TestCase):
             id="SCH_NOT_ELIGIBLE",
             title="Age Gated Scheme",
             criteria=[
-                Criterion(field="age", operator=Operator.LESS_THAN_OR_EQUAL, value=25, mandatory=True),
+                Criterion(
+                    field="age", operator=Operator.LESS_THAN_OR_EQUAL, value=25, mandatory=True
+                ),
             ],
         )
         candidate = {"age": 30}  # Over max age
@@ -564,8 +623,12 @@ class TestFourStatusMapping(unittest.TestCase):
             id="SCH_SKILL",
             title="Python Developer Fellowship",
             criteria=[
-                Criterion(field="skills", operator=Operator.CONTAINS, value="Python", mandatory=True),
-                Criterion(field="age", operator=Operator.GREATER_THAN_OR_EQUAL, value=18, mandatory=True),
+                Criterion(
+                    field="skills", operator=Operator.CONTAINS, value="Python", mandatory=True
+                ),
+                Criterion(
+                    field="age", operator=Operator.GREATER_THAN_OR_EQUAL, value=18, mandatory=True
+                ),
             ],
         )
         # Student profile satisfies age, but has no skills listed
