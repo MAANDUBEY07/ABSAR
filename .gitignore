@@ -54,8 +54,3 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
-
-*.db
-*.sqlite*
-.ruff_cache/
-backend/test-output*.txt

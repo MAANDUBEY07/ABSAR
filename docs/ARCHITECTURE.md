@@ -1,30 +1,48 @@
-# AVSAR backend architecture
+# AVSAR Technical Architecture
 
-The working backend follows the supplied chart. `backend/main.py` contains the FastAPI instance, middleware, safe errors, health/readiness and router registration. `app/main.py` is a compatibility import for that same instance.
+## 1. System High-Level Architecture
 
-```text
-backend/
-  main.py
-  requirements.txt
-  .env.example
-  app/
-    config/       settings.py, database.py
-    models/       profile.py, opportunity.py, resume.py, application.py, trust_report.py
-    schemas/      profile.py, opportunity.py, eligibility.py, resume.py, trust.py, application.py
-    routes/       profile.py, opportunities.py, discovery.py, eligibility.py,
-                  resume.py, trust.py, applications.py, calendar.py
-    services/     ai_extractor.py, notice_parser.py, scraper.py, resume_analyzer.py,
-                  eligibility_engine.py, trust_checker.py, duplicate_detector.py
-    utils/        auth.py, file_handler.py, validators.py
-    tests/        test_scraper.py, test_extractor.py, test_eligibility.py,
-                  test_resume.py, test_trust.py, and the full API/security regression suite
-  uploads/        gitignored temporary-file directory
+```
+[ Candidate / Beneficiary Browser ]
+               │
+               ▼
+   [ Next.js Frontend (Tailwind + React) ]
+               │
+               ▼  REST API (/api/v1)
+   [ FastAPI Backend Application ]
+   ├── Authentication Middleware (Supabase JWT)
+   ├── Routers (Profile, Opportunities, Eligibility, Resume, Trust)
+   │
+   ├── Core Services:
+   │   ├── Eligibility Engine (Rule-based, 100% deterministic)
+   │   ├── AI Extractor & Notice Parser (PDF/Doc OCR & LLM extraction)
+   │   ├── Scraper & Duplicate Detector
+   │   ├── Trust & Credibility Checker
+   │   └── Resume Analyzer
+   │
+   └── Data Persistence:
+       ├── MongoDB (Profiles, Opportunities, Applications, Trust Reports)
+       └── Supabase Auth (Identity & User Credentials)
 ```
 
-Those modules contain real implementations. The former `app/api` implementation has moved to `app/routes`. `utils/auth.py` verifies the selected provider. `utils/file_handler.py` validates and extracts bounded PDF/DOCX/images; `services/resume_analyzer.py` identifies quoted skill claims. `services/scraper.py` is the limited public RSS connector. `services/trust_checker.py` implements conservative deterministic evidence rules.
+## 2. Key Modules & Design Decisions
 
-Additional source files are intentional support for the earlier complete-backend requirements: shared base/runtime models and schemas, repositories, notice/auth/career/readiness/operations routers, job/outbox services, LangGraph checkpoints, worker/operator commands, migrations, dependency constraints, Docker and deployment files. Removing those would remove required persistence or workflows. `models/persistent.py` and `schemas/persistent.py` retain import compatibility while domain definitions live in the chart's named files; they do not define duplicate mapped tables/settings. `services/risk.py` and `services/documents.py` are compatibility aliases to their named implementations.
+### Rule-based Eligibility Engine
+- Resides in `backend/app/services/eligibility_engine.py`.
+- Completely deterministic without LLM hallucinations.
+- Maps internal evaluation to four API contract statuses:
+  - `ELIGIBLE`
+  - `POTENTIALLY_ELIGIBLE`
+  - `NOT_ELIGIBLE`
+  - `CANNOT_DETERMINE`
+- Distinguishes missing candidate data from unconfigured opportunity criteria.
 
-Storage remains PostgreSQL for transactional owned records and MongoDB for flexible catalog/analysis documents. `config/database.py` owns the SQL engine/session and one PyMongo connection. Local development uses SQLite and a durable document-table fallback. This hybrid storage preserves application revision/approval/job guarantees; a file-tree comment about MongoDB does not convert transactional data into an unsafe cross-store transaction.
+### AI Extraction Pipeline
+- Scraper collects raw circulars, notices, and portal postings.
+- `ai_extractor.py` and `notice_parser.py` structure raw texts into standardized opportunities with criteria rules.
+- `duplicate_detector.py` checks similarity and deduplicates against existing records.
+- `trust_checker.py` flags official `.gov.in` / `.nic.in` domains, application fees anomalies, and authenticity signals.
 
-All private access uses the authenticated owner. Long operations return persistent job IDs and run through SQL outbox + Celery; one beat scheduler handles delivery/recovery/reminders/refresh. Models can suggest learning steps but cannot approve applications, establish facts or execute code locally. See [CAPABILITIES.md](CAPABILITIES.md) for operational limits and [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) for actual storage.
+### Frontend Application
+- Next.js App Router for server/client component rendering.
+- Role-driven navigation: dashboard, opportunity exploration, eligibility badges, deadline calendar, and resume matching.

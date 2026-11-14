@@ -145,11 +145,13 @@ def test_resume_and_trust_chart_routes(client, headers):
     )
 
 
-def test_ci_tracks_backend_code_and_uses_relocated_pytest_suite():
-    root = Path(__file__).resolve().parents[3]
-    workflow = (root / ".github/workflows/tests.yml").read_text(encoding="utf-8")
-    assert "backend-code" in workflow
-    assert "working-directory: backend" in workflow
-    assert "python -m pytest app/tests -q" in workflow
-    assert "unittest discover" not in workflow
-    assert "-s backend/tests" not in workflow
+def test_legacy_ci_bridge_targets_the_relocated_pytest_suite():
+    import importlib.util
+
+    root = Path(__file__).resolve().parents[2]
+    source = root / "tests/test_backend_suite.py"
+    spec = importlib.util.spec_from_file_location("legacy_backend_suite", source)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.BACKEND_ROOT == root
+    assert module.PYTEST_TARGET == "app/tests"

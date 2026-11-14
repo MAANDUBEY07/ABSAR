@@ -1,26 +1,69 @@
-# AVSAR backend API
+# AVSAR REST API Documentation
 
-Launch from `backend/` with `uvicorn main:app --reload --port 10000`. Live OpenAPI is `/api/openapi.json`; interactive docs are `/docs`. The checked-in `openapi.json` is generated from the same application.
+This document describes the agreed REST API endpoints for the AVSAR backend service.
 
-Persistent responses use `{"data": ..., "meta": {}}`. Private endpoints require a verified bearer token. Field errors omit sensitive input. `/api` compatibility is development-only; `/api/v1` is the hosted source of truth.
+Base URL: `/api/v1`
 
-| Chart module | Implemented routes under `/api/v1` |
-| --- | --- |
-| `routes/profile.py` | GET/PUT `/profile` and `/profile/me` |
-| `routes/opportunities.py` | GET/POST `/opportunities`, GET `/opportunities/{id}` |
-| `routes/discovery.py` | GET `/discovery/feed`, POST `/discovery/jobs` |
-| `routes/eligibility.py` | POST `/eligibility/check/{id}`, POST `/eligibility/batch`, matching/recommendation/explanation/feedback routes |
-| `routes/resume.py` | POST `/resume/upload`, POST `/resume/match/{id}`, skills analysis/compare/gaps/roadmap/progress |
-| `routes/trust.py` | GET `/trust/verify/{id}`, private verification analysis/history/report routes |
-| `routes/applications.py` | Application creation/list/detail/analytics/update/approve/submit |
-| `routes/calendar.py` | GET `/calendar`, `/calendar/events`, `/calendar/deadlines` |
+---
 
-Additional route modules retain authentication, notice review, documents, assessments, career planning, jobs and notifications from the rebuild requirements. Every listed chart route module is registered in the canonical `backend/main.py`; `app/main.py` retains compatibility with old imports.
+## 1. Authentication & Profiles (`/api/v1/profile`)
 
-`/eligibility/check` and `/eligibility/batch` adapt confirmed stored requirements to the original general engine and return its separate `api_status`: ELIGIBLE, POTENTIALLY_ELIGIBLE, NOT_ELIGIBLE or CANNOT_DETERMINE. Persistent `/recommendations` retains ELIGIBLE/INELIGIBLE/UNKNOWN. No executable custom rule or arbitrary regex is accepted by these HTTP routes. The full general engine remains available as a Python service.
+- **GET `/api/v1/profile/me`**
+  - Headers: `Authorization: Bearer <token>`
+  - Returns current user's profile details.
+- **PUT `/api/v1/profile/me`**
+  - Updates profile demographics (dob, gender, category, domicile, annual_income, skills, education).
 
-Profile updates cannot change identity or notification email. Opportunity listing supports bounded `limit`/`offset`, category, search and exact location through the historical `state` parameter. Discovery feed returns ranked recommendations; discovery jobs accept only operator-configured public RSS feeds.
+---
 
-Resume upload returns 202 with durable job/document IDs. Resume matching requires `{"document_id":"YOUR_ANALYZED_DOCUMENT_ID"}` and uses only that owner's persisted resume claims. It does not infer years of employment. Trust verification returns deterministic risk evidence and UNKNOWN/EXPIRED employer status; it does not fabricate a verified-employer badge or a certainty score. Calendar events derive from the current owner's saved applications and supplied opportunity deadlines, with optional start/end date filters; no external calendar synchronization is claimed.
+## 2. Opportunities & Discovery (`/api/v1/opportunities`, `/api/v1/discovery`)
 
-See [PERSISTENT_API.md](PERSISTENT_API.md) for payloads, application transitions, scoring formulas, uncertainty and job semantics. `API_CONTRACTS.json` contains schemas generated from the implemented Python models, including the separate eligibility vocabulary. See [OPERATIONS.md](OPERATIONS.md) for deployment, explicit migrations/index/checkpoint setup and security boundaries.
+- **GET `/api/v1/opportunities`**
+  - Query parameters: `category`, `state`, `search`, `page`, `limit`
+  - Returns paginated list of active opportunities.
+- **GET `/api/v1/opportunities/{id}`**
+  - Returns detailed opportunity specifications and criteria.
+- **GET `/api/v1/discovery/feed`**
+  - Returns opportunities ranked and personalized for the authenticated candidate.
+
+---
+
+## 3. Eligibility Engine (`/api/v1/eligibility`)
+
+- **POST `/api/v1/eligibility/check/{opportunity_id}`**
+  - Evaluates authenticated candidate profile against the opportunity.
+  - Returns `EligibilityEvaluationResponse` with one of the four contract statuses:
+    - `ELIGIBLE`
+    - `POTENTIALLY_ELIGIBLE`
+    - `NOT_ELIGIBLE`
+    - `CANNOT_DETERMINE`
+- **POST `/api/v1/eligibility/batch`**
+  - Batch evaluates candidate profile against multiple opportunities.
+
+---
+
+## 4. Resume Analyzer (`/api/v1/resume`)
+
+- **POST `/api/v1/resume/upload`**
+  - Uploads PDF/DOCX resume file.
+  - Extracts skills, education, and career experience.
+- **POST `/api/v1/resume/match/{opportunity_id}`**
+  - Matches resume text against opportunity description and generates gap analysis.
+
+---
+
+## 5. Trust & Authenticity (`/api/v1/trust`)
+
+- **GET `/api/v1/trust/verify/{opportunity_id}`**
+  - Returns trust score, verified status, and credibility signals (domain verification, duplicate flags, official Gazette notice check).
+
+---
+
+## 6. Applications & Deadlines (`/api/v1/applications`, `/api/v1/calendar`)
+
+- **GET `/api/v1/applications`**
+  - Returns user tracked applications and status (`saved`, `applied`, `shortlisted`, `rejected`).
+- **POST `/api/v1/applications`**
+  - Adds opportunity to user tracker.
+- **GET `/api/v1/calendar/deadlines`**
+  - Returns upcoming application deadlines and milestones for the calendar widget.
