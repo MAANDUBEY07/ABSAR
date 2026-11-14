@@ -1,106 +1,32 @@
-# AVSAR Database Schema Specification
+# AVSAR storage schema
 
-AVSAR uses MongoDB as the primary operational database, with Supabase managing authentication.
+`backend/app/config/database.py` provides the SQL engine/session and a single configured PyMongo client. Hosted storage is PostgreSQL + MongoDB; local development uses SQLite and a durable SQL document fallback. Settings are defined once in `app/config/settings.py`.
 
----
+## Relational domain models
 
-## Collections
+| Definition | Tables |
+| --- | --- |
+| `models/profile.py` | profiles, student_skills, education, student_preferences |
+| `models/opportunity.py` | saved_opportunities; validated canonical opportunity document type |
+| `models/resume.py` | user_documents; validated resume analysis and claim types |
+| `models/application.py` | applications, application_versions, application_approvals, audit_events |
+| `models/runtime.py` | jobs, integration_outbox, career_goals, career_milestones, assessments, assessment_attempts, notifications, notification_preferences, local_documents |
 
-### 1. `profiles`
-Candidate user profile and demographic information.
+Owned rows share id, owner_id, payload, created_at and updated_at. Explicit indexed identifiers, foreign keys, unique keys and revision checks supplement the payload. Application material snapshots, approvals and audit events are append-only through application behavior, with runtime database permissions documented separately. `models/base.py` owns the single SQLAlchemy metadata/base; importing `app.models` registers all domain tables for Alembic.
 
-```json
-{
-  "_id": "ObjectId",
-  "auth_user_id": "UUID (from Supabase)",
-  "name": "String",
-  "email": "String",
-  "phone": "String",
-  "dob": "Date (YYYY-MM-DD)",
-  "gender": "String ('Male', 'Female', 'Transgender', 'Other')",
-  "category": "String ('General', 'OBC', 'SC', 'ST', 'EWS')",
-  "domicile_state": "String",
-  "domicile_district": "String",
-  "annual_income": "Number",
-  "differently_abled": "Boolean",
-  "disability_percentage": "Number",
-  "education": {
-    "highest_degree": "String",
-    "percentage": "Number",
-    "passing_year": "Number",
-    "institution": "String",
-    "stream": "String"
-  },
-  "skills": ["String"],
-  "resume_url": "String",
-  "created_at": "ISODate",
-  "updated_at": "ISODate"
-}
-```
+## MongoDB collections
 
-### 2. `opportunities`
-Aggregated schemes, scholarships, jobs, grants, and internships.
+- opportunities: canonical SHA-256-derived IDs/fingerprints, explicit source facts, confirmed/unconfirmed requirements and UNKNOWN/EXPIRED employer status.
+- raw_listings: source RSS facts captured during actual discovery.
+- verification_results: private heuristic analyses and separately labeled user allegations.
+- extracted_notices: owner draft/review/confirmation state with conservative provenance/evidence.
+- skill_analysis: owner-scoped resume claims and quoted character offsets.
+- agent_runs: owner-scoped completed career execution metadata.
+- discovery_jobs: bounded RSS discovery results.
+- opportunity_source_snapshots: supplied evidence snapshots for private analyses.
 
-```json
-{
-  "_id": "ObjectId",
-  "title": "String",
-  "description": "String",
-  "category": "String ('scholarship', 'government_scheme', 'internship', 'job', 'grant')",
-  "provider": "String",
-  "source_url": "String",
-  "portal_source": "String",
-  "deadline": "ISODate",
-  "benefits_summary": "String",
-  "criteria": [
-    {
-      "field": "String",
-      "operator": "String",
-      "value": "Any",
-      "description": "String",
-      "mandatory": "Boolean",
-      "weight": "Number",
-      "category": "String"
-    }
-  ],
-  "min_score": "Number",
-  "trust_score": "Number",
-  "is_verified": "Boolean",
-  "raw_notice_text": "String",
-  "dedup_hash": "String",
-  "created_at": "ISODate",
-  "updated_at": "ISODate"
-}
-```
+Unconfigured local MongoDB uses `local_documents(collection,id,payload)` in durable SQLite. Canonical opportunity IDs connect relational applications to the catalog. SQL and MongoDB writes are not a distributed transaction.
 
-### 3. `applications`
-Tracked candidate applications and deadline milestones.
+Uploads are owner-scoped by unique owner/content-hash records. Uploaded bytes are persisted in metadata payloads for the bounded worker parser; temporary `uploads/` files are gitignored. Define retention and backup/deletion policies before production.
 
-```json
-{
-  "_id": "ObjectId",
-  "user_id": "ObjectId (ref: profiles)",
-  "opportunity_id": "ObjectId (ref: opportunities)",
-  "status": "String ('saved', 'applied', 'interview_scheduled', 'shortlisted', 'rejected')",
-  "applied_date": "ISODate",
-  "deadline": "ISODate",
-  "notes": "String",
-  "created_at": "ISODate"
-}
-```
-
-### 4. `trust_reports`
-Audit reports for crawled opportunities assessing authenticity.
-
-```json
-{
-  "_id": "ObjectId",
-  "opportunity_id": "ObjectId (ref: opportunities)",
-  "trust_score": "Number",
-  "status": "String ('VERIFIED', 'SUSPICIOUS', 'UNVERIFIED')",
-  "domain_is_official_gov": "Boolean",
-  "duplicate_of_id": "ObjectId (optional)",
-  "signals": ["String"],
-  "audited_at": "ISODate"
-}
-```
+Run `alembic upgrade head`, `python -m app.manage indexes`, and `python -m app.manage checkpoints` explicitly with operator credentials. Apply `migrations/supabase_rls.sql` separately in Supabase and verify the private runtime role. Hosted startup performs no DDL. See [OPERATIONS.md](OPERATIONS.md).

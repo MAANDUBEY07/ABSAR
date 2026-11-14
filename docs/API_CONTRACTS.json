@@ -1,23 +1,984 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "AVSAR API Contracts",
-  "version": "1.0.0",
-  "description": "Agreed JSON request and response schemas across AVSAR services",
+  "version": "1.1.0",
+  "description": "Generated payload schemas. HTTP successes wrap payloads in data/meta; persistent matching has a separate three-status vocabulary.",
   "definitions": {
-    "EligibilityStatus": {
-      "type": "string",
-      "enum": [
-        "ELIGIBLE",
-        "POTENTIALLY_ELIGIBLE",
-        "NOT_ELIGIBLE",
-        "CANNOT_DETERMINE"
+    "StudentPreferences": {
+      "additionalProperties": false,
+      "properties": {
+        "remote": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Remote"
+        },
+        "domain": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Domain"
+        },
+        "min_stipend": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Stipend"
+        },
+        "max_duration_months": {
+          "anyOf": [
+            {
+              "maximum": 120,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Duration Months"
+        }
+      },
+      "title": "StudentPreferences",
+      "type": "object"
+    },
+    "ProfileInput": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "date_of_birth": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Date Of Birth"
+        },
+        "degree": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Degree"
+        },
+        "branch": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Branch"
+        },
+        "cgpa": {
+          "anyOf": [
+            {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cgpa"
+        },
+        "graduation_year": {
+          "anyOf": [
+            {
+              "maximum": 2150,
+              "minimum": 1950,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Graduation Year"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Location"
+        },
+        "experience_months": {
+          "anyOf": [
+            {
+              "maximum": 1200,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Experience Months"
+        },
+        "experience": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "maxItems": 100,
+          "title": "Experience",
+          "type": "array"
+        },
+        "education": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "maxItems": 30,
+          "title": "Education",
+          "type": "array"
+        },
+        "skills": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 200,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skills"
+        },
+        "preferences": {
+          "$ref": "#/definitions/StudentPreferences"
+        }
+      },
+      "title": "ProfileInput",
+      "type": "object"
+    },
+    "ProfileResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "date_of_birth": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Date Of Birth"
+        },
+        "degree": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Degree"
+        },
+        "branch": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Branch"
+        },
+        "cgpa": {
+          "anyOf": [
+            {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cgpa"
+        },
+        "graduation_year": {
+          "anyOf": [
+            {
+              "maximum": 2150,
+              "minimum": 1950,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Graduation Year"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Location"
+        },
+        "experience_months": {
+          "anyOf": [
+            {
+              "maximum": 1200,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Experience Months"
+        },
+        "experience": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "maxItems": 100,
+          "title": "Experience",
+          "type": "array"
+        },
+        "education": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "maxItems": 30,
+          "title": "Education",
+          "type": "array"
+        },
+        "skills": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 200,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skills"
+        },
+        "preferences": {
+          "$ref": "#/definitions/StudentPreferences"
+        },
+        "notification_email": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notification Email"
+        }
+      },
+      "title": "ProfileResponse",
+      "type": "object"
+    },
+    "Requirements": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmed": {
+          "default": false,
+          "title": "Confirmed",
+          "type": "boolean"
+        },
+        "graduation_years": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Graduation Years",
+          "type": "array"
+        },
+        "degrees": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Degrees",
+          "type": "array"
+        },
+        "branches": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Branches",
+          "type": "array"
+        },
+        "min_cgpa": {
+          "anyOf": [
+            {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Cgpa"
+        },
+        "locations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Locations",
+          "type": "array"
+        },
+        "required_skills": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Skills",
+          "type": "array"
+        },
+        "preferred_skills": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Preferred Skills",
+          "type": "array"
+        },
+        "min_experience_months": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Experience Months"
+        }
+      },
+      "title": "Requirements",
+      "type": "object"
+    },
+    "OpportunityInput": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "category": {
+          "default": "other",
+          "enum": [
+            "internship",
+            "job",
+            "scholarship",
+            "government_scheme",
+            "grant",
+            "fellowship",
+            "scheme",
+            "competition",
+            "hackathon",
+            "other"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "maxLength": 30000,
+          "title": "Description",
+          "type": "string"
+        },
+        "organization": {
+          "anyOf": [
+            {
+              "maxLength": 300,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Organization"
+        },
+        "application_url": {
+          "anyOf": [
+            {
+              "format": "uri",
+              "maxLength": 2083,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Application Url"
+        },
+        "company_url": {
+          "anyOf": [
+            {
+              "format": "uri",
+              "maxLength": 2083,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Company Url"
+        },
+        "source_url": {
+          "anyOf": [
+            {
+              "format": "uri",
+              "maxLength": 2083,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Url"
+        },
+        "deadline": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deadline"
+        },
+        "stipend": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stipend"
+        },
+        "benefit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Benefit"
+        },
+        "duration_months": {
+          "anyOf": [
+            {
+              "maximum": 120,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Months"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Location"
+        },
+        "remote": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Remote"
+        },
+        "domain": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Domain"
+        },
+        "requirements": {
+          "$ref": "#/definitions/Requirements"
+        }
+      },
+      "required": [
+        "title"
       ],
-      "description": "Four externally visible eligibility statuses required by AVSAR API contract"
+      "title": "OpportunityInput",
+      "type": "object"
+    },
+    "OpportunityResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "category": {
+          "default": "other",
+          "enum": [
+            "internship",
+            "job",
+            "scholarship",
+            "government_scheme",
+            "grant",
+            "fellowship",
+            "scheme",
+            "competition",
+            "hackathon",
+            "other"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "maxLength": 30000,
+          "title": "Description",
+          "type": "string"
+        },
+        "organization": {
+          "anyOf": [
+            {
+              "maxLength": 300,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Organization"
+        },
+        "application_url": {
+          "anyOf": [
+            {
+              "format": "uri",
+              "maxLength": 2083,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Application Url"
+        },
+        "company_url": {
+          "anyOf": [
+            {
+              "format": "uri",
+              "maxLength": 2083,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Company Url"
+        },
+        "source_url": {
+          "anyOf": [
+            {
+              "format": "uri",
+              "maxLength": 2083,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Url"
+        },
+        "deadline": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deadline"
+        },
+        "stipend": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stipend"
+        },
+        "benefit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Benefit"
+        },
+        "duration_months": {
+          "anyOf": [
+            {
+              "maximum": 120,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Months"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Location"
+        },
+        "remote": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Remote"
+        },
+        "domain": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Domain"
+        },
+        "requirements": {
+          "$ref": "#/definitions/Requirements"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "fingerprint": {
+          "title": "Fingerprint",
+          "type": "string"
+        },
+        "verification_status": {
+          "default": "UNKNOWN",
+          "enum": [
+            "UNKNOWN",
+            "EXPIRED"
+          ],
+          "title": "Verification Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "id",
+        "fingerprint"
+      ],
+      "title": "OpportunityDocument",
+      "type": "object"
+    },
+    "EligibilityBatch": {
+      "additionalProperties": false,
+      "properties": {
+        "opportunity_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Opportunity Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "opportunity_ids"
+      ],
+      "title": "EligibilityBatch",
+      "type": "object"
     },
     "EligibilityEvaluationResponse": {
-      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scheme_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Scheme Id"
+        },
+        "scheme_title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Scheme Title"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "api_status": {
+          "enum": [
+            "ELIGIBLE",
+            "POTENTIALLY_ELIGIBLE",
+            "NOT_ELIGIBLE",
+            "CANNOT_DETERMINE"
+          ],
+          "title": "Api Status",
+          "type": "string"
+        },
+        "is_eligible": {
+          "title": "Is Eligible",
+          "type": "boolean"
+        },
+        "score": {
+          "title": "Score",
+          "type": "number"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        },
+        "missing_fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Missing Fields",
+          "type": "array"
+        },
+        "has_missing_student_info": {
+          "title": "Has Missing Student Info",
+          "type": "boolean"
+        },
+        "has_missing_opportunity_criteria": {
+          "title": "Has Missing Opportunity Criteria",
+          "type": "boolean"
+        },
+        "passed_count": {
+          "title": "Passed Count",
+          "type": "integer"
+        },
+        "failed_count": {
+          "title": "Failed Count",
+          "type": "integer"
+        },
+        "missing_count": {
+          "title": "Missing Count",
+          "type": "integer"
+        },
+        "passed_criteria": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Passed Criteria",
+          "type": "array"
+        },
+        "failed_criteria": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Failed Criteria",
+          "type": "array"
+        },
+        "missing_criteria": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Missing Criteria",
+          "type": "array"
+        }
+      },
       "required": [
         "scheme_id",
+        "scheme_title",
         "status",
         "api_status",
         "is_eligible",
@@ -26,78 +987,318 @@
         "reasons",
         "missing_fields",
         "has_missing_student_info",
-        "has_missing_opportunity_criteria"
+        "has_missing_opportunity_criteria",
+        "passed_count",
+        "failed_count",
+        "missing_count",
+        "passed_criteria",
+        "failed_criteria",
+        "missing_criteria"
       ],
-      "properties": {
-        "scheme_id": { "type": "string" },
-        "scheme_title": { "type": "string" },
-        "status": { "type": "string" },
-        "api_status": { "$ref": "#/definitions/EligibilityStatus" },
-        "is_eligible": { "type": "boolean" },
-        "score": { "type": "number", "minimum": 0, "maximum": 100 },
-        "summary": { "type": "string" },
-        "reasons": { "type": "array", "items": { "type": "string" } },
-        "missing_fields": { "type": "array", "items": { "type": "string" } },
-        "has_missing_student_info": { "type": "boolean" },
-        "has_missing_opportunity_criteria": { "type": "boolean" },
-        "passed_criteria": { "type": "array", "items": { "type": "object" } },
-        "failed_criteria": { "type": "array", "items": { "type": "object" } },
-        "missing_criteria": { "type": "array", "items": { "type": "object" } }
-      }
+      "title": "EligibilityEvaluationResponse",
+      "type": "object"
     },
-    "OpportunityResponse": {
-      "type": "object",
-      "required": ["id", "title", "category", "source_url", "deadline"],
+    "SkillClaim": {
+      "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
-        "title": { "type": "string" },
-        "description": { "type": "string" },
-        "category": { "type": "string", "enum": ["scholarship", "internship", "job", "government_scheme", "grant"] },
-        "provider": { "type": "string" },
-        "source_url": { "type": "string", "format": "uri" },
-        "deadline": { "type": "string", "format": "date-time" },
-        "criteria": { "type": "array", "items": { "type": "object" } },
-        "trust_score": { "type": "number", "minimum": 0, "maximum": 100 },
-        "is_verified": { "type": "boolean" }
-      }
-    },
-    "ProfileResponse": {
-      "type": "object",
-      "required": ["id", "email", "name"],
-      "properties": {
-        "id": { "type": "string" },
-        "email": { "type": "string", "format": "email" },
-        "name": { "type": "string" },
-        "dob": { "type": "string", "format": "date" },
-        "gender": { "type": "string" },
-        "category": { "type": "string" },
-        "domicile_state": { "type": "string" },
-        "annual_income": { "type": "number" },
-        "education": { "type": "object" },
-        "skills": { "type": "array", "items": { "type": "string" } }
-      }
+        "skill": {
+          "title": "Skill",
+          "type": "string"
+        },
+        "quote": {
+          "title": "Quote",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        },
+        "end": {
+          "minimum": 0,
+          "title": "End",
+          "type": "integer"
+        },
+        "source": {
+          "const": "RESUME_CLAIM",
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "skill",
+        "quote",
+        "start",
+        "end",
+        "source"
+      ],
+      "title": "SkillClaim",
+      "type": "object"
     },
     "ResumeAnalysisResponse": {
-      "type": "object",
-      "required": ["parsed_skills", "experience_years", "readiness_score", "recommendations"],
+      "additionalProperties": false,
       "properties": {
-        "parsed_skills": { "type": "array", "items": { "type": "string" } },
-        "experience_years": { "type": "number" },
-        "education": { "type": "array", "items": { "type": "object" } },
-        "readiness_score": { "type": "number", "minimum": 0, "maximum": 100 },
-        "recommendations": { "type": "array", "items": { "type": "string" } }
-      }
+        "owner_id": {
+          "title": "Owner Id",
+          "type": "string"
+        },
+        "document_id": {
+          "title": "Document Id",
+          "type": "string"
+        },
+        "skills": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Skills",
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/definitions/SkillClaim"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "disclaimer": {
+          "title": "Disclaimer",
+          "type": "string"
+        }
+      },
+      "required": [
+        "owner_id",
+        "document_id",
+        "skills",
+        "evidence",
+        "disclaimer"
+      ],
+      "title": "ResumeAnalysis",
+      "type": "object"
+    },
+    "ResumeMatchInput": {
+      "additionalProperties": false,
+      "properties": {
+        "document_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Document Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id"
+      ],
+      "title": "ResumeMatchInput",
+      "type": "object"
+    },
+    "RiskEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "signal": {
+          "title": "Signal",
+          "type": "string"
+        },
+        "points": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Points",
+          "type": "integer"
+        },
+        "quote": {
+          "title": "Quote",
+          "type": "string"
+        }
+      },
+      "required": [
+        "signal",
+        "points",
+        "quote"
+      ],
+      "title": "RiskEvidence",
+      "type": "object"
     },
     "TrustReportResponse": {
-      "type": "object",
-      "required": ["opportunity_id", "trust_score", "status", "signals"],
+      "additionalProperties": false,
       "properties": {
-        "opportunity_id": { "type": "string" },
-        "trust_score": { "type": "number", "minimum": 0, "maximum": 100 },
-        "status": { "type": "string", "enum": ["VERIFIED", "SUSPICIOUS", "UNVERIFIED"] },
-        "signals": { "type": "array", "items": { "type": "string" } },
-        "official_domain_match": { "type": "boolean" }
-      }
+        "risk_score": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Risk Score",
+          "type": "integer"
+        },
+        "risk_level": {
+          "enum": [
+            "HIGH",
+            "REVIEW",
+            "NO_SIGNALS_DETECTED"
+          ],
+          "title": "Risk Level",
+          "type": "string"
+        },
+        "verification_status": {
+          "enum": [
+            "UNKNOWN",
+            "EXPIRED"
+          ],
+          "title": "Verification Status",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/definitions/RiskEvidence"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "disclaimer": {
+          "title": "Disclaimer",
+          "type": "string"
+        }
+      },
+      "required": [
+        "risk_score",
+        "risk_level",
+        "verification_status",
+        "evidence",
+        "disclaimer"
+      ],
+      "title": "TrustReport",
+      "type": "object"
+    },
+    "Report": {
+      "additionalProperties": false,
+      "properties": {
+        "opportunity_id": {
+          "title": "Opportunity Id",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "opportunity_id",
+        "reason"
+      ],
+      "title": "Report",
+      "type": "object"
+    },
+    "ApplicationCreate": {
+      "additionalProperties": false,
+      "properties": {
+        "opportunity_id": {
+          "maxLength": 64,
+          "title": "Opportunity Id",
+          "type": "string"
+        },
+        "material": {
+          "additionalProperties": true,
+          "title": "Material",
+          "type": "object"
+        }
+      },
+      "required": [
+        "opportunity_id"
+      ],
+      "title": "ApplicationCreate",
+      "type": "object"
+    },
+    "ApplicationPatch": {
+      "additionalProperties": false,
+      "properties": {
+        "revision": {
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "enum": [
+                "DRAFT",
+                "READY_FOR_REVIEW",
+                "ASSESSMENT",
+                "INTERVIEW",
+                "OFFER",
+                "REJECTED",
+                "WITHDRAWN"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status"
+        },
+        "material": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Material"
+        }
+      },
+      "required": [
+        "revision"
+      ],
+      "title": "ApplicationPatch",
+      "type": "object"
+    },
+    "Revision": {
+      "additionalProperties": false,
+      "properties": {
+        "revision": {
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "revision"
+      ],
+      "title": "Revision",
+      "type": "object"
+    },
+    "Submit": {
+      "additionalProperties": false,
+      "properties": {
+        "revision": {
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "confirmation": {
+          "const": true,
+          "title": "Confirmation",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "revision",
+        "confirmation"
+      ],
+      "title": "Submit",
+      "type": "object"
+    },
+    "EligibilityStatus": {
+      "type": "string",
+      "enum": [
+        "ELIGIBLE",
+        "POTENTIALLY_ELIGIBLE",
+        "NOT_ELIGIBLE",
+        "CANNOT_DETERMINE"
+      ]
     }
   }
 }

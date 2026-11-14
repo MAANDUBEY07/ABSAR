@@ -143,3 +143,13 @@ def test_resume_and_trust_chart_routes(client, headers):
         client.get("/api/v1/trust/verify/" + oid, headers=h).json()["data"]["verification_status"]
         == "UNKNOWN"
     )
+
+
+def test_ci_tracks_backend_code_and_uses_relocated_pytest_suite():
+    root = Path(__file__).resolve().parents[3]
+    workflow = (root / ".github/workflows/tests.yml").read_text(encoding="utf-8")
+    assert "backend-code" in workflow
+    assert "working-directory: backend" in workflow
+    assert "python -m pytest app/tests -q" in workflow
+    assert "unittest discover" not in workflow
+    assert "-s backend/tests" not in workflow

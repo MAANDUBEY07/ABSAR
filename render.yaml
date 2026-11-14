@@ -1,0 +1,46 @@
+# Create the external opportunityos-backend environment group before deploying.
+services:
+  - type: web
+    name: opportunityos-api
+    runtime: docker
+    branch: main
+    autoDeployTrigger: checksPass
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /health
+    dockerCommand: uvicorn main:app --host 0.0.0.0 --port 10000
+    envVars: &hosted_environment
+      - fromGroup: opportunityos-backend
+      - key: ENVIRONMENT
+        value: production
+      - key: AUTH_PROVIDER
+        value: supabase
+      - key: REQUIRE_HUMAN_APPROVAL
+        value: "true"
+      - key: AWS_ENABLED
+        value: "false"
+      - key: AI_PROVIDER
+        value: gemini
+      - key: DEMO_MODE
+        value: "false"
+      - key: JOBS_EAGER
+        value: "false"
+  - type: worker
+    name: opportunityos-worker
+    runtime: docker
+    branch: main
+    autoDeployTrigger: checksPass
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    dockerCommand: celery -A app.worker.celery worker --loglevel=INFO --concurrency=2
+    envVars: *hosted_environment
+  - type: worker
+    name: opportunityos-scheduler
+    runtime: docker
+    branch: main
+    autoDeployTrigger: checksPass
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    dockerCommand: celery -A app.worker.celery beat --loglevel=INFO --schedule=/tmp/celerybeat-schedule
+    numInstances: 1
+    envVars: *hosted_environment

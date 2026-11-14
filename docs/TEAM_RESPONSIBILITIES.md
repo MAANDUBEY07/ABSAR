@@ -1,4 +1,4 @@
-# AVSAR – Hackathon MVP Team Responsibilities
+# AVSAR Ã¢â‚¬â€œ Hackathon MVP Team Responsibilities
 
 This document defines the clear division of ownership across the 3 team members to ensure parallel, conflict-free development.
 
@@ -25,16 +25,16 @@ This document defines the clear division of ownership across the 3 team members 
 **Focus Area:** FastAPI Architecture, Database Layer, Eligibility Engine Integration, Security
 
 - **Primary Directories Owned:**
-  - `backend/app/main.py`
+  - `backend/main.py` (public entry point) and `backend/app/main.py` (compatibility import)
   - `backend/app/config/**` (`database.py`, `settings.py`)
   - `backend/app/models/**` & `backend/app/schemas/**`
   - `backend/app/routes/**` (`profile.py`, `opportunities.py`, `eligibility.py`, `applications.py`, `calendar.py`)
   - `backend/app/services/eligibility_engine.py` (Core Engine)
   - `backend/app/utils/**` (`auth.py`, `validators.py`)
-  - `backend/tests/test_eligibility.py`
+  - `backend/app/tests/test_eligibility.py`
 - **Key Responsibilities:**
   1. Setup FastAPI application routing, CORS, and dependency injection.
-  2. Connect MongoDB via Motor / PyMongo and implement schema validation.
+  2. Maintain SQLAlchemy/PostgreSQL owned records, PyMongo document storage and validated domain payloads.
   3. Expose eligibility evaluation endpoints adhering to `docs/API_CONTRACTS.json`.
   4. Implement JWT / Supabase auth verification in `auth.py`.
   5. Maintain 100% test passing rate for core eligibility logic.
@@ -52,10 +52,10 @@ This document defines the clear division of ownership across the 3 team members 
   - `backend/app/services/duplicate_detector.py`
   - `backend/app/services/resume_analyzer.py`
   - `backend/app/routes/discovery.py`, `backend/app/routes/resume.py`, `backend/app/routes/trust.py`
-  - `backend/tests/test_scraper.py`, `backend/tests/test_extractor.py`, `backend/tests/test_resume.py`, `backend/tests/test_trust.py`
+  - `backend/app/tests/test_scraper.py`, `backend/app/tests/test_extractor.py`, `backend/app/tests/test_resume.py`, `backend/app/tests/test_trust.py`
 - **Key Responsibilities:**
-  1. Build scrapers to ingest opportunity postings from target portals and circulars.
+  1. Maintain bounded operator-configured RSS discovery and explicit notice review; do not claim broad portal scraping.
   2. Implement PDF text extraction and structured parsing of criteria using LLM extractor.
   3. Implement deduplication pipeline to prevent redundant opportunities.
-  4. Implement trust scoring algorithm (evaluating domain authenticity and scam signals).
+  4. Maintain deterministic risk evidence while preserving UNKNOWN employer verification.
   5. Implement resume parser to extract skills and compute opportunity match scores.
