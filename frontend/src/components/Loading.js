@@ -1,12 +1,3 @@
-/**
- * Loading Component
- * Generic spinner and skeleton placeholder for asynchronous loading states.
- */
-
-export default function Loading() {
-  return (
-    <div>
-      <p>Loading...</p>
-    </div>
-  );
+export default function Loading({ label = "Loading" }) {
+  return <div className="loading-state" role="status" aria-live="polite"><span className="spinner" aria-hidden="true" /><span>{label}</span></div>;
 }

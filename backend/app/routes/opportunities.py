@@ -27,6 +27,8 @@ def list_opportunities(
     state: str | None = None,
     search: str | None = Query(None, max_length=300),
 ):
+    if category == "coding_challenge":
+        category = "coding_competition"
     candidates = documents.scan("opportunities", limit=501)
     result = []
     for record in candidates[:500]:
@@ -49,4 +51,24 @@ def list_opportunities(
         offset=offset,
         scanned=min(500, len(candidates)),
         truncated=len(candidates) > 500,
+    )
+
+
+@router.get("/opportunities/{record_id}/observations")
+def observations(record_id: str, owner: Owner, limit: Limit = 20, offset: Offset = 0):
+    opportunity(record_id)
+    return ok(
+        documents.related("opportunity_observations", "opportunity_id", record_id, limit, offset),
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/opportunities/{record_id}/duplicates")
+def duplicate_reviews(record_id: str, owner: Owner, limit: Limit = 20, offset: Offset = 0):
+    opportunity(record_id)
+    return ok(
+        documents.related("duplicate_reviews", "candidate_id", record_id, limit, offset),
+        limit=limit,
+        offset=offset,
     )

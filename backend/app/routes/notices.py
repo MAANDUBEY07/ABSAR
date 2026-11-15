@@ -28,10 +28,13 @@ def notice_extract(record_id: str, owner: Owner, db: DB):
     if not record:
         raise HTTPException(404, "Notice not found")
     job = enqueue(db, owner, "notice", {"document_id": record_id})
-    if record["status"] == "UPLOADED":
-        documents.put(
-            "extracted_notices", record_id, dict(record, status="PROCESSING", job_id=job.id)
-        )
+    documents.transition(
+        "extracted_notices",
+        record_id,
+        owner,
+        {"UPLOADED"},
+        dict(status="PROCESSING", job_id=job.id),
+    )
     return ok(dict(job_id=job.id, status=job.status))
 
 

@@ -57,12 +57,14 @@ def fetch(url, max_bytes=MAX_BYTES):
             raise ValueError("Retrieval time limit exceeded")
         u, port, address = destination(url)
         conn = PinnedHTTP(u.hostname, port, address, u.scheme == "https")
+        response = None
         try:
             conn.request(
                 "GET",
                 (u.path or "/") + ("?" + u.query if u.query else ""),
                 headers={"User-Agent": "OpportunityOS/1.0", "Accept-Encoding": "identity"},
             )
+            transport = conn.sock
             response = conn.getresponse()
             if response.status in {301, 302, 303, 307, 308}:
                 location = response.getheader("Location")
@@ -82,14 +84,18 @@ def fetch(url, max_bytes=MAX_BYTES):
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     raise ValueError("Retrieval time limit exceeded")
-                conn.sock.settimeout(min(5, remaining))
+                transport.settimeout(min(5, remaining))
                 piece = response.read1(min(65536, max_bytes + 1 - len(chunks)))
                 if not piece:
                     break
                 chunks.extend(piece)
                 if len(chunks) > max_bytes:
                     raise ValueError("Response exceeds limit")
+                if response.isclosed():
+                    break
             return bytes(chunks)
         finally:
+            if response is not None:
+                response.close()
             conn.close()
     raise ValueError("Too many redirects")

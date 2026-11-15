@@ -19,6 +19,20 @@ def job(record_id: str, owner: Owner, db: DB):
     return ok(data)
 
 
+@router.get("/jobs/{record_id}/result")
+def job_result(record_id: str, owner: Owner, db: DB):
+    row = owned(db, Job, owner, record_id)
+    return ok(
+        dict(
+            id=row.id,
+            status=row.status,
+            attempts=row.attempts,
+            result=row.payload.get("result"),
+            error=row.payload.get("error"),
+        )
+    )
+
+
 @router.post("/jobs/{record_id}/cancel")
 def cancel(record_id: str, owner: Owner, db: DB):
     row = owned(db, Job, owner, record_id, lock=True)

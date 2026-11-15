@@ -1,12 +1,3 @@
-/**
- * Footer Component
- * Common footer with links, copyright, and platform disclosures.
- */
-
 export default function Footer() {
-  return (
-    <footer>
-      <p>&copy; {new Date().getFullYear()} AVSAR Platform</p>
-    </footer>
-  );
+  return <footer className="footer"><span>AVSAR</span><span>Discover more. Apply smarter.</span><span className="footer-right">Prototype · Verify details with the original source</span></footer>;
 }

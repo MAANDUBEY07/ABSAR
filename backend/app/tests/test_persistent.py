@@ -254,12 +254,15 @@ def test_redirect_revalidated():
     class Response:
         status = 302
 
+        def close(self):
+            pass
+
         def getheader(self, name):
             return "http://127.0.0.1/admin"
 
     class Connection:
         def __init__(self, *args):
-            pass
+            self.sock = None  # Redirect response has no body to read.
 
         def request(self, *args, **kwargs):
             pass

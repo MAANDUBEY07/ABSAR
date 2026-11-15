@@ -4,12 +4,12 @@ from datetime import date
 from app.models.base import now
 from app.repositories import documents
 from app.services.catalog import digest
-from app.services.trust_checker import analyze
+from app.integrations import member1
 
 
 def refresh():
     seen = set()
-    for previous in documents.scan("verification_results", limit=100):
+    for previous in documents.iterate("verification_results", batch_size=100):
         if (
             not previous.get("opportunity_id")
             or not previous.get("owner_id")
@@ -29,7 +29,7 @@ def refresh():
             "verification_results",
             record_id,
             dict(
-                analyze(current),
+                member1.analyze_trust(current),
                 owner_id=owner,
                 opportunity_id=opportunity_id,
                 analyzed_at=now().isoformat(),
