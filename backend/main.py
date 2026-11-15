@@ -49,6 +49,14 @@ async def lifespan(app):
         from app.services.career import setup_checkpoints
 
         setup_checkpoints()
+    if settings.postgres_startup_diagnostics:
+        try:
+            from app.utils.postgres_diagnostics import run_postgres_diagnostics
+
+            await asyncio.to_thread(run_postgres_diagnostics, engine)
+        except Exception:  # nosec B110
+            # Even diagnostic import, cleanup or logging failures must not block startup.
+            pass
     yield
 
 

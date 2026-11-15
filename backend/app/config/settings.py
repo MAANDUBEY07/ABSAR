@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     mongodb_database: str = "opportunityos"
     redis_url: str = "redis://localhost:6379/0"
     jobs_eager: bool = True
+    postgres_startup_diagnostics: bool = False
     career_checkpoint_db: str = "career-checkpoints.sqlite"
     aws_enabled: bool = False
     aws_region: str = ""
