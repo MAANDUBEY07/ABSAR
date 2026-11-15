@@ -140,43 +140,92 @@ export function AuthProvider({ children }) {
     };
   }, [loadCurrentUser]);
 
-  const signIn = useCallback(async ({ email, password }) => {
+  const sendOtp = useCallback(async ({ email, isSignUp = false }) => {
     setError("");
+    const normalizedEmail = (email || "").trim().toLowerCase();
+    if (!normalizedEmail) throw new Error("Please enter a valid email address.");
+
     if (provider === "local") {
-      const result = await localAuth("login", { email, password });
-      if (!result?.access_token) throw new Error("The local auth service did not return an access token.");
-      storeLocalToken(result.access_token);
-      await loadCurrentUser({ email }, "local");
-      return;
+      // Local dev emulation: directly proceed to OTP verification phase
+      return { success: true, email: normalizedEmail, simulated: true };
     }
+
     const client = getSupabaseClient();
     if (!client) throw new Error("Supabase authentication is not configured.");
-    const { data, error: signInError } = await client.auth.signInWithPassword({ email, password });
-    if (signInError) throw signInError;
-    if (!data.session) throw new Error("Sign in completed without a session. Check your email verification settings.");
+
+    const { error: otpError } = await client.auth.signInWithOtp({
+      email: normalizedEmail,
+      options: {
+        shouldCreateUser: Boolean(isSignUp),
+      },
+    });
+
+    if (otpError) {
+      // Handle Supabase error codes for existing or missing users gracefully
+      const msg = otpError.message || "";
+      if (!isSignUp && (otpError.status === 400 || /user not found|not registered|sign up/i.test(msg))) {
+        throw new Error("No account found with this email. Please create an account first.");
+      }
+      throw otpError;
+    }
+
+    return { success: true, email: normalizedEmail };
+  }, [provider]);
+
+  const verifyOtp = useCallback(async ({ email, token }) => {
+    setError("");
+    const normalizedEmail = (email || "").trim().toLowerCase();
+    const cleanToken = (token || "").trim().replace(/\D/g, "");
+
+    if (!normalizedEmail) throw new Error("Email is required.");
+    if (cleanToken.length !== 6) throw new Error("Please enter the complete 6-digit OTP code.");
+
+    if (provider === "local") {
+      // Support local development login/signup emulation with OTP
+      const result = await localAuth("login", { email: normalizedEmail, password: cleanToken }).catch(async () => {
+        return await localAuth("signup", { email: normalizedEmail, password: cleanToken });
+      });
+      if (!result?.access_token) throw new Error("Local authentication failed.");
+      storeLocalToken(result.access_token);
+      await loadCurrentUser({ email: normalizedEmail }, "local");
+      return;
+    }
+
+    const client = getSupabaseClient();
+    if (!client) throw new Error("Supabase authentication is not configured.");
+
+    const { data, error: verifyError } = await client.auth.verifyOtp({
+      email: normalizedEmail,
+      token: cleanToken,
+      type: "email",
+    });
+
+    if (verifyError) {
+      if (/expired/i.test(verifyError.message)) {
+        throw new Error("The OTP code has expired. Please request a new code.");
+      }
+      if (/invalid/i.test(verifyError.message)) {
+        throw new Error("Invalid OTP code. Please check your 6-digit code and try again.");
+      }
+      throw verifyError;
+    }
+
+    if (!data.session) {
+      throw new Error("Verification completed without an active session. Please try again.");
+    }
+
     setUser(data.user);
     await loadCurrentUser(data.user, "supabase");
   }, [loadCurrentUser, provider]);
 
+  // Backward-compatibility wrappers for any legacy caller
+  const signIn = useCallback(async ({ email, password }) => {
+    return sendOtp({ email, isSignUp: false });
+  }, [sendOtp]);
+
   const signUp = useCallback(async ({ email, password }) => {
-    setError("");
-    if (provider === "local") {
-      const result = await localAuth("signup", { email, password });
-      if (!result?.access_token) throw new Error("The local auth service did not return an access token.");
-      storeLocalToken(result.access_token);
-      await loadCurrentUser({ email }, "local");
-      return { confirmationRequired: false };
-    }
-    const client = getSupabaseClient();
-    if (!client) throw new Error("Supabase authentication is not configured.");
-    const { data, error: signUpError } = await client.auth.signUp({ email, password });
-    if (signUpError) throw signUpError;
-    if (data.session) {
-      setUser(data.user);
-      await loadCurrentUser(data.user, "supabase");
-    }
-    return { confirmationRequired: !data.session };
-  }, [loadCurrentUser, provider]);
+    return sendOtp({ email, isSignUp: true });
+  }, [sendOtp]);
 
   const signOut = useCallback(async () => {
     setError("");
@@ -188,9 +237,10 @@ export function AuthProvider({ children }) {
   }, [provider, user]);
 
   const value = useMemo(() => ({
-    provider, authConfig, user, loading, error, setError, signIn, signUp, signOut,
+    provider, authConfig, user, loading, error, setError,
+    sendOtp, verifyOtp, signIn, signUp, signOut,
     refreshUser: () => loadCurrentUser(user, provider),
-  }), [provider, authConfig, user, loading, error, signIn, signUp, signOut, loadCurrentUser]);
+  }), [provider, authConfig, user, loading, error, sendOtp, verifyOtp, signIn, signUp, signOut, loadCurrentUser]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
