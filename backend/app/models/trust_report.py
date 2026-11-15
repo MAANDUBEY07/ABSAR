@@ -17,4 +17,5 @@ class TrustReport(BaseModel):
     risk_level: Literal["HIGH", "REVIEW", "NO_SIGNALS_DETECTED"]
     verification_status: Literal["UNKNOWN", "EXPIRED"]
     evidence: list[RiskEvidence]
+    source_assessment: dict | None = None
     disclaimer: str

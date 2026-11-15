@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     environment: Literal["development", "test", "staging", "production"] = "development"
     demo_mode: bool = False
     require_human_approval: bool = True
-    auth_provider: Literal["local", "supabase", "cognito"] = "local"
+    auth_provider: Literal["local", "supabase"] = "local"
     jwt_secret: str = "development-only-change-before-sharing-32chars"
     supabase_url: str = ""
     supabase_anon_key: str = ""
@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     otel_enabled: bool = False
     log_level: str = "INFO"
     discovery_feeds: list[str] = Field(default_factory=list)
+    discovery_sources: list[str] = Field(default_factory=list)
 
     @property
     def hosted(self):

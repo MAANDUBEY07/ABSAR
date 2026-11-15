@@ -6,7 +6,7 @@ from app.repositories import documents
 from app.schemas.eligibility import MatchInput
 from app.schemas.trust import Report
 from app.services.catalog import opportunity
-from app.services.trust_checker import analyze
+from app.integrations import member1
 
 router = APIRouter()
 
@@ -15,7 +15,7 @@ router = APIRouter()
 def risk(body: MatchInput, owner: Owner):
     data = opportunity(body.opportunity_id)
     result = dict(
-        analyze(data),
+        member1.analyze_trust(data),
         owner_id=owner,
         opportunity_id=data["id"],
         analyzed_at=now().isoformat(),
@@ -33,12 +33,7 @@ def risk(body: MatchInput, owner: Owner):
 
 @router.get("/verification/{record_id}/history")
 def history(record_id: str, owner: Owner):
-    rows = [
-        r
-        for r in documents.scan("verification_results", owner=owner)
-        if r.get("opportunity_id") == record_id
-    ]
-    rows.sort(key=lambda r: r.get("analyzed_at", ""), reverse=True)
+    rows = documents.verification_history(owner, record_id)
     return ok(rows)
 
 
@@ -72,4 +67,6 @@ def report(body: Report, owner: Owner):
 def trust_report(opportunity_id: str, owner: Owner):
     rows = history(opportunity_id, owner)["data"]
     analyses = [r for r in rows if "risk_score" in r]
-    return ok(analyses[0]) if analyses else risk(MatchInput(opportunity_id=opportunity_id), owner)
+    if not analyses:
+        raise HTTPException(404, "Trust analysis unavailable; POST /verification/analyze first")
+    return ok(analyses[0])

@@ -8,7 +8,7 @@ from app.repositories import documents
 from app.schemas.eligibility import MatchInput, EligibilityBatch
 from app.schemas.opportunity import Feedback
 from app.services.catalog import opportunity
-from app.services.matching import match
+from app.services.matching import match, is_open
 
 router = APIRouter()
 
@@ -31,6 +31,8 @@ def recommendations(
     catalog = documents.scan("opportunities", limit=501)
     results = []
     for record in catalog[:500]:
+        if not is_open(record):
+            continue
         if remote is not None and record.get("remote") != remote:
             continue
         if domain and record.get("domain") != domain:

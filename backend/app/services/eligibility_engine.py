@@ -815,19 +815,19 @@ class EligibilityEngine:
 
     def evaluate_rule_group(
         self, candidate_data: Dict[str, Any], rule_group: RuleGroup
-    ) -> Tuple[bool, List[CriterionResult]]:
+    ) -> Tuple[Optional[bool], List[CriterionResult]]:
         """
         Evaluates a composite RuleGroup containing AND, OR, or NOT logic.
         Returns: (passed: bool, list of sub-criterion results)
         """
         sub_results: List[CriterionResult] = []
-        eval_outcomes: List[bool] = []
+        eval_outcomes: List[Optional[bool]] = []
 
         for rule in rule_group.rules:
             if isinstance(rule, Criterion):
                 c_res = self.evaluate_criterion(candidate_data, rule)
                 sub_results.append(c_res)
-                eval_outcomes.append(c_res.passed)
+                eval_outcomes.append(None if c_res.is_missing else c_res.passed)
             elif isinstance(rule, RuleGroup):
                 g_pass, g_sub = self.evaluate_rule_group(candidate_data, rule)
                 sub_results.extend(g_sub)
@@ -842,7 +842,7 @@ class EligibilityEngine:
                     c_obj = Criterion.from_dict(rule)
                     c_res = self.evaluate_criterion(candidate_data, c_obj)
                     sub_results.append(c_res)
-                    eval_outcomes.append(c_res.passed)
+                    eval_outcomes.append(None if c_res.is_missing else c_res.passed)
 
         if not eval_outcomes:
             return True, sub_results
@@ -852,14 +852,20 @@ class EligibilityEngine:
             combinator = LogicalCombinator(combinator.upper())
 
         if combinator == LogicalCombinator.AND:
-            overall_pass = all(eval_outcomes)
+            overall_pass = (
+                False if False in eval_outcomes else None if None in eval_outcomes else True
+            )
         elif combinator == LogicalCombinator.OR:
-            overall_pass = any(eval_outcomes)
+            overall_pass = (
+                True if True in eval_outcomes else None if None in eval_outcomes else False
+            )
         elif combinator == LogicalCombinator.NOT:
             # NOT inverts the first condition
-            overall_pass = not eval_outcomes[0] if eval_outcomes else False
+            overall_pass = None if eval_outcomes[0] is None else not eval_outcomes[0]
         else:
-            overall_pass = all(eval_outcomes)
+            overall_pass = (
+                False if False in eval_outcomes else None if None in eval_outcomes else True
+            )
 
         return overall_pass, sub_results
 
@@ -953,7 +959,11 @@ class EligibilityEngine:
                     else:
                         failed_criteria.append(sub)
 
-                if grp_pass:
+                if grp_pass is None:
+                    if rule.mandatory:
+                        has_missing_mandatory = True
+                    reasons.append("Missing information for rule group")
+                elif grp_pass:
                     earned_weight += rule.weight
                 else:
                     if rule.mandatory:
@@ -976,7 +986,11 @@ class EligibilityEngine:
                             passed_criteria.append(sub)
                         else:
                             failed_criteria.append(sub)
-                    if grp_pass:
+                    if grp_pass is None:
+                        if grp.mandatory:
+                            has_missing_mandatory = True
+                        reasons.append("Missing information for rule group")
+                    elif grp_pass:
                         earned_weight += grp.weight
                     else:
                         if grp.mandatory:

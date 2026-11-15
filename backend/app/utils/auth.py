@@ -33,14 +33,11 @@ def verify_token(token):
             options={"require": ["sub", "exp", "iat", "iss", "aud"]},
         )
     else:
-        if settings.auth_provider == "supabase":
-            issuer = settings.supabase_url.rstrip("/") + "/auth/v1"
-            algorithms, audience = ["RS256", "ES256"], "authenticated"
-            url = issuer + "/.well-known/jwks.json"
-        else:
-            issuer = f"https://cognito-idp.{settings.cognito_region}.amazonaws.com/{settings.cognito_user_pool_id}"
-            algorithms, audience = ["RS256"], settings.cognito_client_id
-            url = issuer + "/.well-known/jwks.json"
+        if settings.auth_provider != "supabase":
+            raise ValueError("Unsupported authentication provider")
+        issuer = settings.supabase_url.rstrip("/") + "/auth/v1"
+        algorithms, audience = ["RS256", "ES256"], "authenticated"
+        url = issuer + "/.well-known/jwks.json"
         header = jwt.get_unverified_header(token)
         if header.get("alg") not in algorithms or not isinstance(header.get("kid"), str):
             raise ValueError("Untrusted algorithm")
@@ -55,8 +52,6 @@ def verify_token(token):
         )
         if settings.auth_provider == "supabase" and claims.get("role") != "authenticated":
             raise ValueError("Unauthenticated role")
-        if settings.auth_provider == "cognito" and claims.get("token_use") != "id":
-            raise ValueError("Only configured Cognito ID tokens accepted")
     UUID(claims["sub"])
     return claims
 

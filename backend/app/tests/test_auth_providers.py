@@ -4,7 +4,7 @@ from unittest.mock import patch
 from uuid import uuid4
 import jwt
 import pytest
-from cryptography.hazmat.primitives.asymmetric import ec, rsa
+from cryptography.hazmat.primitives.asymmetric import ec
 from app.utils.auth import verify_token
 from app.config import settings
 
@@ -80,36 +80,12 @@ def test_supabase_rejects_signature_and_algorithm(signing, monkeypatch):
         verify_token(token)
 
 
-def test_cognito_pool_client_and_token_type(monkeypatch):
+def test_cognito_is_excluded_from_active_authentication(monkeypatch):
+    from app.config import Settings
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        Settings(auth_provider="cognito")
     monkeypatch.setattr(settings, "auth_provider", "cognito")
-    monkeypatch.setattr(settings, "cognito_region", "ap-south-1")
-    monkeypatch.setattr(settings, "cognito_user_pool_id", "ap-south-1_example")
-    monkeypatch.setattr(settings, "cognito_client_id", "configured-client")
-    private = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    claims = dict(
-        sub=str(uuid4()),
-        iss="https://cognito-idp.ap-south-1.amazonaws.com/ap-south-1_example",
-        aud="configured-client",
-        exp=datetime.now(timezone.utc) + timedelta(minutes=5),
-        token_use="id",
-    )
-    fake = SimpleNamespace(
-        get_signing_key_from_jwt=lambda token: SimpleNamespace(key=private.public_key())
-    )
-    with patch("app.utils.auth.jwks_client", return_value=fake):
-        assert (
-            verify_token(jwt.encode(claims, private, algorithm="RS256", headers={"kid": "key"}))[
-                "token_use"
-            ]
-            == "id"
-        )
-        for change in (
-            dict(aud="wrong-client"),
-            dict(token_use="access"),
-            dict(iss="https://other-pool.example"),
-        ):
-            token = jwt.encode(
-                dict(claims, **change), private, algorithm="RS256", headers={"kid": "key"}
-            )
-            with pytest.raises((ValueError, jwt.PyJWTError)):
-                verify_token(token)
+    with pytest.raises(ValueError, match="Unsupported authentication provider"):
+        verify_token("untrusted")

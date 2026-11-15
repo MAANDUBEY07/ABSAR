@@ -1,8 +1,17 @@
 """Deterministic ranking; unknown factors remain null and contribute zero."""
 
+from datetime import date
 from app.utils.validators import normalized
 
 from app.config import settings
+from app.integrations.profile import eligibility_profile
+
+
+def is_open(opportunity):
+    deadline = opportunity.get("deadline")
+    return opportunity.get("verification_status") != "EXPIRED" and (
+        not deadline or date.fromisoformat(str(deadline)) >= date.today()
+    )
 
 
 def compare_skills(skills, requirements):
@@ -22,6 +31,7 @@ def compare_skills(skills, requirements):
 
 
 def match(profile, opportunity):
+    profile = eligibility_profile(profile)
     requirements = opportunity.get("requirements", {})
     checks = []
 
@@ -29,7 +39,11 @@ def match(profile, opportunity):
         if needed is None or needed == []:
             return
         value = profile.get(field)
-        passed = None if value is None else bool(predicate(value, needed))
+        passed = (
+            None
+            if value is None or not requirements.get("confirmed")
+            else bool(predicate(value, needed))
+        )
         checks.append({"field": field, "required": needed, "actual": value, "passed": passed})
 
     for field, key in (
@@ -48,12 +62,13 @@ def match(profile, opportunity):
     check(
         "skills", requirements.get("required_skills"), lambda v, n: normalized(n) <= normalized(v)
     )
-    status = (
-        "INELIGIBLE"
-        if any(c["passed"] is False for c in checks)
-        else "UNKNOWN"
-        if not requirements.get("confirmed") or any(c["passed"] is None for c in checks)
-        else "ELIGIBLE"
+    from app.services.eligibility_adapter import evaluate_opportunity
+
+    decision = evaluate_opportunity(
+        profile, dict(opportunity, title=opportunity.get("title") or "Opportunity")
+    )
+    status = {"ELIGIBLE": "ELIGIBLE", "NOT_ELIGIBLE": "INELIGIBLE"}.get(
+        decision["api_status"], "UNKNOWN"
     )
     analysis = compare_skills(profile.get("skills"), requirements)
     pref_checks = []
@@ -91,12 +106,13 @@ def match(profile, opportunity):
     return dict(
         opportunity_id=opportunity["id"],
         eligibility=status,
+        eligibility_detail=decision,
         checks=checks,
         factors=factors,
         weights=settings.match_weights,
         score=round(sum((factors[k] or 0) * w for k, w in settings.match_weights.items()), 4),
         data_coverage=sum(w for k, w in settings.match_weights.items() if factors[k] is not None),
         skill_analysis=analysis,
-        recommendable=status == "ELIGIBLE",
+        recommendable=status == "ELIGIBLE" and is_open(opportunity),
         explanation="Eligibility is independent of ranking. Learning measures missing preferred skills, not proficiency.",
     )

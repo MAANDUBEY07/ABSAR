@@ -140,6 +140,12 @@ def test_resume_and_trust_chart_routes(client, headers):
         == 404
     )
     assert (
+        client.post(
+            "/api/v1/verification/analyze", headers=h, json={"opportunity_id": oid}
+        ).status_code
+        == 200
+    )
+    assert (
         client.get("/api/v1/trust/verify/" + oid, headers=h).json()["data"]["verification_status"]
         == "UNKNOWN"
     )

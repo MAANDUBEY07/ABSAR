@@ -4,7 +4,7 @@ This document defines the clear division of ownership across the 3 team members 
 
 ---
 
-## Member 1: Frontend & User Experience Lead
+## Member 3: Frontend & User Experience Lead
 **Focus Area:** Next.js Application, UI/UX, Component Library, State & Auth Integration
 
 - **Primary Directories Owned:**
@@ -31,17 +31,17 @@ This document defines the clear division of ownership across the 3 team members 
   - `backend/app/routes/**` (`profile.py`, `opportunities.py`, `eligibility.py`, `applications.py`, `calendar.py`)
   - `backend/app/services/eligibility_engine.py` (Core Engine)
   - `backend/app/utils/**` (`auth.py`, `validators.py`)
-  - `backend/tests/test_eligibility.py`
+  - `backend/app/tests/test_eligibility.py`
 - **Key Responsibilities:**
   1. Setup FastAPI application routing, CORS, and dependency injection.
-  2. Connect MongoDB via Motor / PyMongo and implement schema validation.
+  2. Maintain SQLAlchemy owned records, PyMongo documents and local SQLite compatibility.
   3. Expose eligibility evaluation endpoints adhering to `docs/API_CONTRACTS.json`.
   4. Implement JWT / Supabase auth verification in `auth.py`.
   5. Maintain 100% test passing rate for core eligibility logic.
 
 ---
 
-## Member 3: Data Ingestion, AI Extraction & Trust Checker Lead
+## Member 1: Data Ingestion, AI Extraction & Trust Checker Lead
 **Focus Area:** Web Crawling, PDF/Notice Extraction, Deduplication, Trust Scoring, Resume Analysis
 
 - **Primary Directories Owned:**
@@ -59,3 +59,8 @@ This document defines the clear division of ownership across the 3 team members 
   3. Implement deduplication pipeline to prevent redundant opportunities.
   4. Implement trust scoring algorithm (evaluating domain authenticity and scam signals).
   5. Implement resume parser to extract skills and compute opportunity match scores.
+
+
+## Phase 2 coordination
+
+Backend owns canonical API schemas and adapters; Member 1 owns algorithms; Member 3 owns frontend behavior. See INTEGRATION_CONTRACTS.md for the reconciled implementation boundaries and remaining review gates. Published feature branches remain preserved; cross-module integration fixes live on the dedicated integration branch.

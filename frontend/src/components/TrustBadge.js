@@ -1,10 +1,5 @@
-/**
- * TrustBadge Component
- * Displays verified shield or credibility indicator for authentic opportunities.
- */
-
-export default function TrustBadge({ trustScore, isVerified }) {
-  return (
-    <span>{isVerified ? "Verified Official" : "Unverified"}</span>
-  );
+import { trustState } from "@/services/trust-state.mjs";
+export default function TrustBadge({ status, report }) {
+  const state = trustState(report, status);
+  return <span className={`badge badge-${state.tone}`} title={report?.disclaimer || "Domain and risk signals are not proof of legitimacy or fraud"}>{state.label}</span>;
 }
