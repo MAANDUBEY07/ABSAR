@@ -5,7 +5,6 @@ Tests resume PDF extraction, skill parsing, education identification,
 experience estimation, gap analysis, and opportunity matching.
 """
 
-from io import BytesIO
 import os
 import sys
 import unittest
@@ -15,9 +14,9 @@ import pymupdf
 # Ensure backend directory is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+from app.models.resume import ResumeAnalysis, SkillClaim
 from app.services.resume_analyzer import (
     ResumeAnalysisResult,
-    ResumeAnalyzer,
     analyze_resume,
     estimate_experience_years,
     extract_education,
@@ -170,6 +169,94 @@ class TestResumeAnalyzerService(unittest.TestCase):
         corrupt_bytes_res = analyze_resume(b"not a valid pdf document")
         self.assertEqual(corrupt_bytes_res.parsed_skills, [])
         self.assertEqual(corrupt_bytes_res.experience_years, 0.0)
+
+    def test_extended_skill_taxonomy_and_benign_negations(self):
+        """Verify newly added modern skills and ensure benign 'do not' in preceding sentences does not exclude skills."""
+        text = (
+            "Do not hesitate to reach out via email. "
+            "Technical Skills: Python, Docker, Tailwind CSS, LangChain, Terraform, Postman."
+        )
+        skills = extract_skills(text)
+        self.assertIn("python", skills)
+        self.assertIn("docker", skills)
+        self.assertIn("tailwind css", skills)
+        self.assertIn("langchain", skills)
+        self.assertIn("terraform", skills)
+        self.assertIn("postman", skills)
+
+    def test_analyze_resume_additional_args_compatibility(self):
+        """Verify analyze_resume accepts positional and keyword owner/document metadata without crashing or discarding."""
+        text = "Experienced software engineer with Python and React."
+        # Test keyword arguments
+        res_kw = analyze_resume(text, owner_id="student_456", document_id="doc_789")
+        self.assertIn("python", res_kw.parsed_skills)
+        self.assertIn("react", res_kw.parsed_skills)
+        self.assertEqual(res_kw.owner_id, "student_456")
+        self.assertEqual(res_kw.document_id, "doc_789")
+        self.assertEqual(res_kw.skills, res_kw.parsed_skills)
+        self.assertEqual(res_kw.to_dict()["owner_id"], "student_456")
+
+        # Test positional arguments as invoked by Member 2 jobs.py
+        res_pos = analyze_resume(text, "student_456", "doc_789")
+        self.assertEqual(res_pos.owner_id, "student_456")
+        self.assertEqual(res_pos.document_id, "doc_789")
+
+    def test_member2_backend_schema_validation_regression(self):
+        """Regression test: Serialized result must validate strictly against
+
+        Member 2's ResumeAnalysis schema with extra='forbid'.
+        Exercises both positional (jobs.py / member1.py adapter) and keyword calls.
+        """
+        resume_text = (
+            "Aarav Sharma\n"
+            "Backend Engineer proficient in Python, Docker, and PostgreSQL.\n"
+            "Education: B.Tech Computer Science, 2024.\n"
+            "2 years of experience building microservices."
+        )
+
+        # 1. Positional invocation path: analyze_resume(text, owner_id, document_id)
+        # Matches Member 2's backend/app/integrations/member1.py line:
+        # _invoke("app.services.resume_analyzer", "analyze_resume", text, owner_id, document_id)
+        raw_result_pos = analyze_resume(resume_text, "user_alpha_123", "doc_beta_456")
+
+        # Must satisfy Member 2's _payload() expectation: isinstance(raw_result, dict)
+        self.assertIsInstance(raw_result_pos, dict)
+
+        # Must validate against Member 2's ResumeAnalysis without extra field errors
+        validated_pos = ResumeAnalysis.model_validate(raw_result_pos)
+        self.assertEqual(validated_pos.owner_id, "user_alpha_123")
+        self.assertEqual(validated_pos.document_id, "doc_beta_456")
+        self.assertIn("python", validated_pos.skills)
+        self.assertIn("docker", validated_pos.skills)
+        self.assertIn("postgresql", validated_pos.skills)
+        self.assertGreaterEqual(len(validated_pos.evidence), 3)
+
+        # Verify evidence item schema and claims
+        for claim in validated_pos.evidence:
+            self.assertIsInstance(claim, SkillClaim)
+            self.assertEqual(claim.source, "RESUME_CLAIM")
+            self.assertGreaterEqual(claim.start, 0)
+            self.assertGreater(claim.end, claim.start)
+            self.assertEqual(resume_text[claim.start : claim.end].lower(), claim.quote.lower())
+
+        self.assertEqual(
+            validated_pos.disclaimer,
+            "Resume claims; confirm explicitly through profile updates",
+        )
+
+        # Frontend attributes must still be accessible on the result object
+        self.assertIn("python", raw_result_pos.parsed_skills)
+        self.assertGreaterEqual(raw_result_pos.experience_years, 2.0)
+        self.assertGreaterEqual(raw_result_pos.readiness_score, 50.0)
+
+        # 2. Keyword invocation path: analyze_resume(text, owner_id=..., document_id=...)
+        raw_result_kw = analyze_resume(
+            resume_text, owner_id="user_kw_789", document_id="doc_kw_101"
+        )
+        validated_kw = ResumeAnalysis.model_validate(raw_result_kw)
+        self.assertEqual(validated_kw.owner_id, "user_kw_789")
+        self.assertEqual(validated_kw.document_id, "doc_kw_101")
+        self.assertIn("python", validated_kw.skills)
 
 
 if __name__ == "__main__":

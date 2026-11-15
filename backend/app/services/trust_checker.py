@@ -6,13 +6,14 @@ and detects scam / fraud indicators (upfront fees, suspicious public emails, cre
 """
 
 from __future__ import annotations
-from app.integrations.risk_compat import analyze as analyze
 
-from dataclasses import dataclass, field
 import logging
 import re
-from typing import Any, Dict, List, Literal, Optional
+from dataclasses import dataclass, field
+from typing import Any, Literal
 from urllib.parse import urlparse
+
+from app.integrations.risk_compat import analyze as analyze
 
 logger = logging.getLogger(__name__)
 
@@ -70,13 +71,13 @@ class TrustReport:
     opportunity_id: str
     trust_score: float
     status: TrustStatus
-    signals: List[str]
+    signals: list[str]
     official_domain_match: bool
-    positive_indicators: List[str] = field(default_factory=list)
-    negative_indicators: List[str] = field(default_factory=list)
-    domain: Optional[str] = None
+    positive_indicators: list[str] = field(default_factory=list)
+    negative_indicators: list[str] = field(default_factory=list)
+    domain: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert report to API-contract-compliant JSON dictionary."""
         return {
             "opportunity_id": self.opportunity_id,
@@ -90,7 +91,7 @@ class TrustReport:
         }
 
 
-def extract_domain(url: Optional[str]) -> Optional[str]:
+def extract_domain(url: str | None) -> str | None:
     """Extracts lowercase hostname from a URL."""
     if not url:
         return None
@@ -99,11 +100,11 @@ def extract_domain(url: Optional[str]) -> Optional[str]:
             url = f"https://{url}"
         parsed = urlparse(url)
         return parsed.hostname.lower() if parsed.hostname else None
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
 
-def is_official_government_domain(domain_or_url: Optional[str]) -> bool:
+def is_official_government_domain(domain_or_url: str | None) -> bool:
     """Checks whether the domain is an official Indian government portal (.gov.in / .nic.in)."""
     domain = (
         extract_domain(domain_or_url) if domain_or_url and "://" in domain_or_url else domain_or_url
@@ -111,12 +112,12 @@ def is_official_government_domain(domain_or_url: Optional[str]) -> bool:
     if not domain:
         return False
     domain = domain.lower().strip()
-    if domain.endswith(".gov.in") or domain.endswith(".nic.in"):
+    if domain.endswith((".gov.in", ".nic.in")):
         return True
     return domain in GOVERNMENT_DOMAINS
 
 
-def is_academic_domain(domain_or_url: Optional[str]) -> bool:
+def is_academic_domain(domain_or_url: str | None) -> bool:
     """Checks whether the domain is an accredited Indian academic / research institution."""
     domain = (
         extract_domain(domain_or_url) if domain_or_url and "://" in domain_or_url else domain_or_url
@@ -130,7 +131,7 @@ def is_academic_domain(domain_or_url: Optional[str]) -> bool:
     return False
 
 
-def is_recognized_platform(domain_or_url: Optional[str]) -> bool:
+def is_recognized_platform(domain_or_url: str | None) -> bool:
     """Checks whether the domain is a recognized public competition/hackathon platform."""
     domain = (
         extract_domain(domain_or_url) if domain_or_url and "://" in domain_or_url else domain_or_url
@@ -140,6 +141,32 @@ def is_recognized_platform(domain_or_url: Optional[str]) -> bool:
     domain = domain.lower().strip()
     for plat in RECOGNIZED_PLATFORMS:
         if domain == plat or domain.endswith(f".{plat}"):
+            return True
+    return False
+
+
+def is_negated_or_anti_fraud_advisory(match_span: tuple[int, int], text: str) -> bool:
+    """
+    Checks if a matched pattern occurs within an explicit denial, disclaimer,
+    or official anti-fraud warning (e.g. 'Beware of fraudulent agents demanding fees',
+    'Do not share your OTP with anyone', 'Neither BHEL nor Ministry charges any fee').
+    """
+    start, end = match_span
+    window_start = max(0, start - 140)
+    window_end = min(len(text), end + 90)
+    context = text[window_start:window_end].lower()
+
+    denial_patterns = [
+        r"\b(?:no|zero|without|free\s+of|strictly\s+free)\b",
+        r"\b(?:not\s+(?:required|demanded|asked|charged|needed))\b",
+        r"\b(?:do\s+not|does\s+not|never|neither)\s+(?:pay|give|charges?|asks?|demands?|collects?|requires?)\b",
+        r"\b(?:beware\s+of|caution|warning|fake|fraudulent|alert)\b",
+        r"\b(?:advis(?:ed|es)?\s+(?:candidates\s+)?not\s+to\s+pay)\b",
+        r"\b(?:never\s+share|do\s+not\s+share|never\s+disclose|do\s+not\s+disclose|never\s+asks?)\b",
+        r"\b(?:will\s+never\s+ask|does\s+not\s+requests?)\b",
+    ]
+    for p in denial_patterns:
+        if re.search(p, context):
             return True
     return False
 
@@ -155,7 +182,7 @@ class TrustChecker:
         self.verified_threshold = verified_threshold
         self.unverified_threshold = unverified_threshold
 
-    def evaluate(self, opportunity: Dict[str, Any]) -> TrustReport:
+    def evaluate(self, opportunity: dict[str, Any]) -> TrustReport:
         """
         Evaluates an opportunity dictionary and produces a TrustReport.
 
@@ -183,9 +210,9 @@ class TrustChecker:
         primary_domain = app_domain or source_domain
 
         score = 50.0  # Base neutral score
-        signals: List[str] = []
-        positive_indicators: List[str] = []
-        negative_indicators: List[str] = []
+        signals: list[str] = []
+        positive_indicators: list[str] = []
+        negative_indicators: list[str] = []
         has_critical_red_flag = False
 
         # -------------------------------------------------------------------
@@ -231,44 +258,48 @@ class TrustChecker:
         # 2. Scam & Fraud Indicators
         # -------------------------------------------------------------------
 
-        from app.integrations.negation import affirmative_text
-
-        risk_text = affirmative_text(combined_text)
         # A. Upfront fee for employment, scholarship or selection
         # Note: Hackathons may have registration fees, but jobs/scholarships should not demand "placement fees"
         fee_match = re.search(
-            r"\b(?:(?:security|processing|registration|joining|training)\s+fees?|deposit|charges?)\s*(?:of\s*)?(?:rs\.?|inr|Ã¢â€šÂ¹)?\s*\d+\b",
-            risk_text,
-            re.I,
+            r"\b(?:(?:security|processing|registration|joining|training)\s+fees?|deposit|charges?)\s*(?:of\s*)?(?:rs\.?|inr|₹)?\s*\d+\b",
+            combined_text,
+            re.IGNORECASE,
         )
         guarantee_match = re.search(
             r"\b(?:guaranteed?\s+(?:job|placement|selection|visa)|100%\s+placement)\b",
-            risk_text,
-            re.I,
+            combined_text,
+            re.IGNORECASE,
         )
         # Avoid false positives where text says "no registration fee" or "free application"
-        negated_fee = re.search(
-            r"\b(?:no|zero|without|not\s+required|free)\s+(?:registration|application|security)?\s*(?:fee|deposit|charge)\b",
-            risk_text,
-            re.I,
+        explicit_free = re.search(
+            r"\b(?:no\s+fee|zero\s+application\s+fee|free\s+of\s+cost|strictly\s+free|without\s+any\s+(?:fee|charges?))\b",
+            combined_text,
+            re.IGNORECASE,
         )
+        if explicit_free:
+            sig = "Notice explicitly confirms zero registration or application fee"
+            if sig not in positive_indicators:
+                positive_indicators.append(sig)
+                score += 5.0
 
-        if (
-            fee_match
-            and not negated_fee
-            and (guarantee_match or category in {"job", "internship", "scholarship"})
-        ):
-            score -= 40.0
-            has_critical_red_flag = True
-            sig = f"Upfront fee requirement detected for opportunity ('{fee_match.group(0)}')"
-            signals.append(sig)
-            negative_indicators.append(sig)
+        if fee_match:
+            if is_negated_or_anti_fraud_advisory(fee_match.span(), combined_text):
+                sig = "Notice contains explicit anti-fraud / no-fee disclaimer protecting candidates against unauthorized fees"
+                if sig not in positive_indicators:
+                    positive_indicators.append(sig)
+                    score += 5.0
+            elif guarantee_match or category in {"job", "internship", "scholarship"}:
+                score -= 40.0
+                has_critical_red_flag = True
+                sig = f"Upfront fee requirement detected for opportunity ('{fee_match.group(0)}')"
+                signals.append(sig)
+                negative_indicators.append(sig)
 
         # B. Suspicious public webmail for official programs
         public_email_match = re.search(
             r"\b[A-Za-z0-9._%+-]+@(gmail|yahoo|hotmail|outlook|rediffmail)\.com\b",
             combined_text,
-            re.I,
+            re.IGNORECASE,
         )
         if public_email_match:
             email_addr = public_email_match.group(0)
@@ -288,7 +319,7 @@ class TrustChecker:
         urgency_match = re.search(
             r"\b(?:pay\s+(?:within|in)\s+\d+\s+hours|urgent\s+fee|immediate\s+payment\s+required|transfer\s+via\s+(?:gpay|phonepe|paytm|upi))\b",
             combined_text,
-            re.I,
+            re.IGNORECASE,
         )
         if urgency_match:
             score -= 30.0
@@ -300,21 +331,27 @@ class TrustChecker:
         # D. Sensitive credential phishing
         phishing_match = re.search(
             r"\b(?:OTP|bank\s+account\s+password|ATM\s+PIN|CVV|credit\s+card\s+number|net\s+banking\s+password)\b",
-            risk_text,
-            re.I,
+            combined_text,
+            re.IGNORECASE,
         )
         if phishing_match:
-            score -= 50.0
-            has_critical_red_flag = True
-            sig = f"Demands sensitive banking credentials or security codes ('{phishing_match.group(0)}')"
-            signals.append(sig)
-            negative_indicators.append(sig)
+            if is_negated_or_anti_fraud_advisory(phishing_match.span(), combined_text):
+                sig = "Official security advisory instructing candidates never to share sensitive credentials"
+                if sig not in positive_indicators:
+                    positive_indicators.append(sig)
+                    score += 5.0
+            else:
+                score -= 50.0
+                has_critical_red_flag = True
+                sig = f"Demands sensitive banking credentials or security codes ('{phishing_match.group(0)}')"
+                signals.append(sig)
+                negative_indicators.append(sig)
 
         # E. Unrealistic compensation / get-rich-quick
         unrealistic_match = re.search(
-            r"\b(?:earn\s+(?:rs\.?|inr|Ã¢â€šÂ¹)?\s*\d{5,}\s+(?:per|a)\s+day|earn\s+lakhs?\s+without\s+work|no\s+skills?\s+earn\s+money)\b",
+            r"\b(?:earn\s+(?:rs\.?|inr|₹)?\s*\d{5,}\s+(?:per|a)\s+day|earn\s+lakhs?\s+without\s+work|no\s+skills?\s+earn\s+money)\b",
             combined_text,
-            re.I,
+            re.IGNORECASE,
         )
         if unrealistic_match:
             score -= 25.0
@@ -357,6 +394,6 @@ class TrustChecker:
 _checker_instance = TrustChecker()
 
 
-def check_opportunity_trust(opportunity: Dict[str, Any]) -> TrustReport:
+def check_opportunity_trust(opportunity: dict[str, Any]) -> TrustReport:
     """Convenience function evaluating trust for an opportunity dictionary."""
     return _checker_instance.evaluate(opportunity)

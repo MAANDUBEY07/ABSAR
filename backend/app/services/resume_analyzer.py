@@ -7,14 +7,14 @@ Conforms strictly to the AVSAR ResumeAnalysisResponse API contract.
 """
 
 from __future__ import annotations
-from app.integrations.resume_claims import claims as claims
 
-from dataclasses import dataclass, field
-from datetime import datetime
-from io import BytesIO
 import logging
 import re
-from typing import Any, Dict, List, Optional, Set
+from datetime import datetime
+from io import BytesIO
+from typing import Any
+
+from app.integrations.resume_claims import claims as claims
 
 import pymupdf
 
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # Standard Skill Taxonomy & Canonical Mappings
 # ---------------------------------------------------------------------------
 
-SKILL_TAXONOMY: Dict[str, List[str]] = {
+SKILL_TAXONOMY: dict[str, list[str]] = {
     # Programming Languages
     "python": ["python", "python3", "py"],
     "javascript": ["javascript", "js", "ecmascript"],
@@ -54,36 +54,52 @@ SKILL_TAXONOMY: Dict[str, List[str]] = {
     "spring boot": ["spring boot", "springboot", "spring framework"],
     "angular": ["angular", "angularjs"],
     "vue.js": ["vue", "vue.js", "vuejs"],
-    # AI & Data Science
+    "tailwind css": ["tailwind", "tailwind css", "tailwindcss"],
+    "redux": ["redux", "redux toolkit"],
+    # AI, ML & Data Science
     "machine learning": ["machine learning", "ml", "pattern recognition"],
     "deep learning": ["deep learning", "dl", "neural networks"],
     "pytorch": ["pytorch"],
-    "tensorflow": ["tensorflow", "tf"],
+    "tensorflow": ["tensorflow", "tf", "keras"],
     "pandas": ["pandas"],
     "numpy": ["numpy"],
     "scikit-learn": ["scikit-learn", "sklearn"],
     "nlp": ["nlp", "natural language processing", "spacy", "nltk", "transformers"],
     "computer vision": ["computer vision", "opencv"],
     "generative ai": ["generative ai", "genai", "llm", "large language models"],
+    "langchain": ["langchain", "llamaindex", "rag"],
+    "huggingface": ["huggingface", "hugging face"],
     # Cloud & DevOps
     "docker": ["docker", "containerization"],
     "kubernetes": ["kubernetes", "k8s"],
     "aws": ["aws", "amazon web services", "ec2", "s3", "lambda"],
     "azure": ["azure", "microsoft azure"],
     "gcp": ["gcp", "google cloud", "google cloud platform"],
+    "terraform": ["terraform"],
+    "ansible": ["ansible"],
     "git": ["git", "github", "gitlab", "version control"],
     "ci/cd": ["ci/cd", "continuous integration", "github actions", "jenkins"],
     "linux": ["linux", "ubuntu", "bash", "shell scripting"],
-    # Databases & Storage
+    # Databases, Storage & Messaging
     "mongodb": ["mongodb", "mongo"],
     "redis": ["redis"],
     "postgresql": ["postgresql", "postgres"],
     "elasticsearch": ["elasticsearch"],
-    # Core CS & Soft Skills
+    "firebase": ["firebase"],
+    "supabase": ["supabase"],
+    "kafka": ["kafka", "apache kafka"],
+    "rabbitmq": ["rabbitmq"],
+    # Mobile & Cross-Platform
+    "flutter": ["flutter"],
+    "react native": ["react native"],
+    "android": ["android development", "android studio"],
+    # Core CS, API & Testing
     "data structures": ["data structures", "dsa", "algorithms"],
     "system design": ["system design", "distributed systems", "microservices"],
     "rest api": ["rest api", "restful api", "restful", "api development"],
     "graphql": ["graphql"],
+    "postman": ["postman"],
+    "pytest": ["pytest", "unit testing"],
     "agile": ["agile", "scrum", "kanban"],
     "communication": ["communication", "team collaboration", "technical writing"],
     "problem solving": ["problem solving", "analytical skills"],
@@ -95,27 +111,77 @@ SKILL_TAXONOMY: Dict[str, List[str]] = {
 # ---------------------------------------------------------------------------
 
 
-@dataclass
-class ResumeAnalysisResult:
-    """Standardized output conforming strictly to AVSAR ResumeAnalysisResponse API contract."""
+class ResumeAnalysisResult(dict):
+    """
+    Standardized output conforming strictly to both AVSAR ResumeAnalysisResponse
+    frontend API contract and Member 2's backend ResumeAnalysis schema.
+    """
 
-    parsed_skills: List[str]
-    experience_years: float
-    education: List[Dict[str, Any]]
-    readiness_score: float
-    recommendations: List[str]
-    matched_skills: List[str] = field(default_factory=list)
-    missing_skills: List[str] = field(default_factory=list)
+    def __init__(
+        self,
+        parsed_skills: list[str],
+        experience_years: float,
+        education: list[dict[str, Any]],
+        readiness_score: float,
+        recommendations: list[str],
+        matched_skills: list[str] | None = None,
+        missing_skills: list[str] | None = None,
+        owner_id: str | None = None,
+        document_id: str | None = None,
+        evidence: list[dict[str, Any]] | None = None,
+        disclaimer: str = "Resume claims; confirm explicitly through profile updates",
+    ) -> None:
+        self.parsed_skills = parsed_skills
+        self.experience_years = experience_years
+        self.education = education
+        self.readiness_score = readiness_score
+        self.recommendations = recommendations
+        self.matched_skills = matched_skills or []
+        self.missing_skills = missing_skills or []
+        self.owner_id = owner_id
+        self.document_id = document_id
+        self.evidence = evidence or []
+        self.disclaimer = disclaimer
 
-    def to_dict(self) -> Dict[str, Any]:
+        # If owner_id and document_id are supplied, populate dict with exact fields required by Member 2 ResumeAnalysis:
+        if owner_id is not None and document_id is not None:
+            super().__init__(
+                owner_id=owner_id,
+                document_id=document_id,
+                skills=parsed_skills,
+                evidence=self.evidence,
+                parsed_skills=parsed_skills,
+                experience_years=self.experience_years,
+                education=self.education,
+                readiness_score=round(self.readiness_score, 1),
+                recommendations=self.recommendations,
+                warnings=[
+                    "Rule-based estimates; absence of evidence is not proof of no experience"
+                ],
+                disclaimer=self.disclaimer,
+            )
+        else:
+            payload: dict[str, Any] = {
+                "parsed_skills": self.parsed_skills,
+                "experience_years": round(self.experience_years, 1),
+                "education": self.education,
+                "readiness_score": round(self.readiness_score, 1),
+                "recommendations": self.recommendations,
+            }
+            if self.matched_skills:
+                payload["matched_skills"] = self.matched_skills
+            if self.missing_skills:
+                payload["missing_skills"] = self.missing_skills
+            super().__init__(payload)
+
+    @property
+    def skills(self) -> list[str]:
+        """Field alias matching backend ResumeAnalysis schema."""
+        return self.parsed_skills
+
+    def to_dict(self) -> dict[str, Any]:
         """Convert to API contract JSON structure."""
-        return {
-            "parsed_skills": self.parsed_skills,
-            "experience_years": round(self.experience_years, 1),
-            "education": self.education,
-            "readiness_score": round(self.readiness_score, 1),
-            "recommendations": self.recommendations,
-        }
+        return dict(self)
 
 
 # ---------------------------------------------------------------------------
@@ -131,46 +197,68 @@ def extract_text_from_pdf_bytes(pdf_bytes: bytes) -> str:
         with pymupdf.open(stream=BytesIO(pdf_bytes), filetype="pdf") as doc:
             pages = [page.get_text("text").strip() for page in doc]
             return "\n\n".join(filter(None, pages))
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.warning("Failed to extract text from PDF: %s", e)
         return ""
 
 
-def extract_skills(text: str) -> List[str]:
+def extract_skills_with_evidence(
+    text: str,
+) -> tuple[list[str], list[dict[str, Any]]]:
     """
-    Extracts canonical skills from resume text using taxonomy matching,
-    regex word boundaries, and negative context checks.
+    Extracts canonical skills from resume text along with exact text quotes,
+    character offsets, and evidence provenance for backend verification.
     """
     if not text:
-        return []
+        return [], []
 
     normalized_text = text.lower()
-    extracted: Set[str] = set()
+    extracted: set[str] = set()
+    evidence: list[dict[str, Any]] = []
 
     for canonical, aliases in SKILL_TAXONOMY.items():
         for alias in aliases:
             # Word boundary regex avoiding partial matches
             pattern = rf"(?<![a-zA-Z0-9_#+]){re.escape(alias)}(?![a-zA-Z0-9_#+])"
-            match = re.search(pattern, normalized_text)
-            if match:
-                # Check for negative context before the match (e.g. "no knowledge of Docker")
-                start_idx = max(0, match.start() - 35)
+            for match in re.finditer(pattern, normalized_text):
+                # Check for explicit negative context directly qualifying the skill (e.g. "no knowledge of Docker")
+                start_idx = max(0, match.start() - 60)
                 prefix = normalized_text[start_idx : match.start()]
-                if re.search(r"\b(?:no|not|lack(?:ing)?|never|unfamiliar\s+with)\b", prefix):
+                negation_pattern = r"\b(?:no|not|without|zero|lack(?:ing)?|never|unfamiliar)\b(?:[^\.\!\?\n]{1,40})\s*$"
+                if re.search(negation_pattern, prefix):
                     continue
 
                 extracted.add(canonical)
+                quote_val = text[match.start() : match.end()]
+                evidence.append(
+                    {
+                        "skill": canonical,
+                        "quote": quote_val,
+                        "start": match.start(),
+                        "end": match.end(),
+                        "source": "RESUME_CLAIM",
+                    }
+                )
                 break
 
-    return sorted(extracted)
+    return sorted(extracted), evidence
 
 
-def extract_education(text: str) -> List[Dict[str, Any]]:
+def extract_skills(text: str) -> list[str]:
+    """
+    Extracts canonical skills from resume text using taxonomy matching,
+    regex word boundaries, and negative context checks.
+    """
+    skills, _ = extract_skills_with_evidence(text)
+    return skills
+
+
+def extract_education(text: str) -> list[dict[str, Any]]:
     """Extracts degrees, institutions, and graduation years from resume text."""
     if not text:
         return []
 
-    education_records: List[Dict[str, Any]] = []
+    education_records: list[dict[str, Any]] = []
 
     # Degree patterns
     degree_patterns = [
@@ -178,7 +266,10 @@ def extract_education(text: str) -> List[Dict[str, Any]]:
             r"\b(B\.?Tech|B\.?E\.?|Bachelor\s+of\s+Technology|Bachelor\s+of\s+Engineering)\b",
             "B.Tech",
         ),
-        (r"\b(M\.?Tech|M\.?E\.?|Master\s+of\s+Technology|Master\s+of\s+Engineering)\b", "M.Tech"),
+        (
+            r"\b(M\.?Tech|M\.?E\.?|Master\s+of\s+Technology|Master\s+of\s+Engineering)\b",
+            "M.Tech",
+        ),
         (r"\b(B\.?C\.?A\.?|Bachelor\s+of\s+Computer\s+Applications)\b", "BCA"),
         (r"\b(M\.?C\.?A\.?|Master\s+of\s+Computer\s+Applications)\b", "MCA"),
         (r"\b(B\.?Sc|B\.?S\.?|Bachelor\s+of\s+Science)\b", "B.Sc"),
@@ -192,7 +283,7 @@ def extract_education(text: str) -> List[Dict[str, Any]]:
     branch_pattern = re.search(
         r"\b(Computer\s+Science|Information\s+Technology|Mechanical|Electrical|Electronics|Civil|Data\s+Science|Artificial\s+Intelligence)\b",
         text,
-        re.I,
+        re.IGNORECASE,
     )
     branch = branch_pattern.group(0).title() if branch_pattern else None
 
@@ -207,9 +298,9 @@ def extract_education(text: str) -> List[Dict[str, Any]]:
     )
     institution = inst_match.group(1).strip() if inst_match else None
 
-    found_degrees: Set[str] = set()
+    found_degrees: set[str] = set()
     for regex, standard_degree in degree_patterns:
-        if re.search(regex, text, re.I):
+        if re.search(regex, text, re.IGNORECASE):
             found_degrees.add(standard_degree)
 
     if found_degrees:
@@ -247,7 +338,7 @@ def estimate_experience_years(text: str) -> float:
     explicit_match = re.search(
         r"\b(\d+(?:\.\d+)?)\s*\+?\s*years?(?:\s+of)?\s+(?:professional\s+|relevant\s+|industry\s+)?experience\b",
         text,
-        re.I,
+        re.IGNORECASE,
     )
     if explicit_match:
         try:
@@ -258,10 +349,10 @@ def estimate_experience_years(text: str) -> float:
     # 2. Date ranges like "Jan 2022 - Mar 2024" or "2021 - Present"
     current_year = datetime.now().year
     month_names = "Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec"
-    range_regex = rf"\b(?:{month_names})[a-z]*\s+(\d{{4}})\s*[-â€“to]+\s*(?:(?:{month_names})[a-z]*\s+)?(\d{{4}}|Present|Current)\b"
+    range_regex = rf"\b(?:{month_names})[a-z]*\s+(\d{{4}})\s*[-–to]+\s*(?:(?:{month_names})[a-z]*\s+)?(\d{{4}}|Present|Current)\b"
 
     total_months = 0
-    matches = re.findall(range_regex, text, re.I)
+    matches = re.findall(range_regex, text, re.IGNORECASE)
 
     for start_year_str, end_year_str in matches:
         start_year = int(start_year_str)
@@ -280,7 +371,9 @@ def estimate_experience_years(text: str) -> float:
         return min(round(years, 1), 35.0)
 
     # 3. Simple standalone year ranges "2022 - 2024" in experience sections
-    simple_years = re.findall(r"\b(20[1-2]\d)\s*[-â€“]\s*(20[1-2]\d|Present|Current)\b", text, re.I)
+    simple_years = re.findall(
+        r"\b(20[1-2]\d)\s*[-–]\s*(20[1-2]\d|Present|Current)\b", text, re.IGNORECASE
+    )
     if simple_years:
         spans = []
         for sy, ey in simple_years:
@@ -302,15 +395,20 @@ def estimate_experience_years(text: str) -> float:
 class ResumeAnalyzer:
     """Service analyzing candidate resumes, extracting credentials, and evaluating readiness."""
 
-    def analyze_text(self, resume_text: str) -> ResumeAnalysisResult:
+    def analyze_text(
+        self,
+        resume_text: str,
+        owner_id: str | None = None,
+        document_id: str | None = None,
+    ) -> ResumeAnalysisResult:
         """Analyzes plain resume text without specific opportunity context."""
-        skills = extract_skills(resume_text)
+        skills, evidence = extract_skills_with_evidence(resume_text)
         education = extract_education(resume_text)
         exp_years = estimate_experience_years(resume_text)
 
         # Baseline readiness based on resume completeness
         score = 40.0
-        recommendations: List[str] = []
+        recommendations: list[str] = []
 
         if len(skills) >= 5:
             score += 25.0
@@ -343,17 +441,27 @@ class ResumeAnalyzer:
             education=education,
             readiness_score=readiness_score,
             recommendations=recommendations,
+            owner_id=owner_id,
+            document_id=document_id,
+            evidence=evidence,
         )
 
-    def analyze_pdf(self, pdf_bytes: bytes) -> ResumeAnalysisResult:
+    def analyze_pdf(
+        self,
+        pdf_bytes: bytes,
+        owner_id: str | None = None,
+        document_id: str | None = None,
+    ) -> ResumeAnalysisResult:
         """Parses a resume PDF and performs credential extraction."""
         text = extract_text_from_pdf_bytes(pdf_bytes)
-        return self.analyze_text(text)
+        return self.analyze_text(text, owner_id=owner_id, document_id=document_id)
 
     def match_against_opportunity(
         self,
         resume_input: str | bytes,
-        opportunity: Dict[str, Any],
+        opportunity: dict[str, Any],
+        owner_id: str | None = None,
+        document_id: str | None = None,
     ) -> ResumeAnalysisResult:
         """
         Matches a resume (text or PDF bytes) against an opportunity's requirements,
@@ -364,11 +472,11 @@ class ResumeAnalyzer:
         else:
             resume_text = resume_input
 
-        base_result = self.analyze_text(resume_text)
+        base_result = self.analyze_text(resume_text, owner_id=owner_id, document_id=document_id)
         candidate_skills = set(base_result.parsed_skills)
 
         # Extract required skills from opportunity
-        opp_required: List[str] = []
+        opp_required: list[str] = []
         if isinstance(opportunity.get("required_skills"), list):
             opp_required.extend([s.lower().strip() for s in opportunity["required_skills"]])
 
@@ -377,8 +485,8 @@ class ResumeAnalyzer:
             desc_text = f"{opportunity.get('title', '')} {opportunity.get('description', '')}"
             opp_required = extract_skills(desc_text)
 
-        matched: List[str] = []
-        missing: List[str] = []
+        matched: list[str] = []
+        missing: list[str] = []
 
         for req in opp_required:
             if req in candidate_skills:
@@ -400,7 +508,7 @@ class ResumeAnalyzer:
         final_readiness = min(max(match_score + exp_score + edu_score, 0.0), 100.0)
 
         # Actionable recommendations
-        recs: List[str] = []
+        recs: list[str] = []
         if missing:
             skills_str = ", ".join(f"'{m}'" for m in missing[:5])
             recs.append(
@@ -426,6 +534,9 @@ class ResumeAnalyzer:
             recommendations=recs,
             matched_skills=matched,
             missing_skills=missing,
+            owner_id=owner_id,
+            document_id=document_id,
+            evidence=base_result.evidence,
         )
 
 
@@ -435,11 +546,33 @@ _analyzer_instance = ResumeAnalyzer()
 
 def analyze_resume(
     resume_input: str | bytes,
-    opportunity: Optional[Dict[str, Any]] = None,
+    opportunity_or_owner: dict[str, Any] | str | None = None,
+    document_id: str | None = None,
+    *,
+    opportunity: dict[str, Any] | None = None,
+    owner_id: str | None = None,
 ) -> ResumeAnalysisResult:
-    """Convenience function analyzing resume text or PDF bytes with optional opportunity matching."""
-    if opportunity:
-        return _analyzer_instance.match_against_opportunity(resume_input, opportunity)
+    """
+    Explicit, type-safe convenience function analyzing resume text or PDF bytes.
+    Supports both Member 3 frontend opportunity matching and Member 2 backend document tracking.
+    """
+    target_opp = opportunity
+    resolved_owner = owner_id
+    resolved_doc = document_id
+
+    if isinstance(opportunity_or_owner, dict):
+        target_opp = opportunity_or_owner
+    elif isinstance(opportunity_or_owner, str):
+        resolved_owner = opportunity_or_owner
+
+    if target_opp:
+        return _analyzer_instance.match_against_opportunity(
+            resume_input, target_opp, owner_id=resolved_owner, document_id=resolved_doc
+        )
     if isinstance(resume_input, bytes):
-        return _analyzer_instance.analyze_pdf(resume_input)
-    return _analyzer_instance.analyze_text(resume_input)
+        return _analyzer_instance.analyze_pdf(
+            resume_input, owner_id=resolved_owner, document_id=resolved_doc
+        )
+    return _analyzer_instance.analyze_text(
+        resume_input, owner_id=resolved_owner, document_id=resolved_doc
+    )

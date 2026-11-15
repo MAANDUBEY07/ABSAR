@@ -8,13 +8,11 @@ and normalization across opportunity categories.
 import os
 import sys
 import unittest
-from unittest.mock import MagicMock, patch
 
 # Ensure backend directory is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.services.scraper import (
-    BaseSourceAdapter,
     DevpostHackathonAdapter,
     EthicalCrawlerGuard,
     GenericHTMLAdapter,
@@ -22,8 +20,11 @@ from app.services.scraper import (
     NATSApprenticeshipAdapter,
     OpportunityScraperService,
     ScrapedOpportunity,
+    SmartIndiaHackathonAdapter,
     SourceMetadata,
     SourceRegistry,
+    UGCNoticeAdapter,
+    parse_scraped_date,
 )
 
 
@@ -218,7 +219,8 @@ class TestScraperService(unittest.TestCase):
 
         self.assertEqual(adapter.parse_html("", "https://scholarships.gov.in"), [])
         self.assertEqual(
-            adapter.parse_html("<<<invalid <> html>>>", "https://scholarships.gov.in"), []
+            adapter.parse_html("<<<invalid <> html>>>", "https://scholarships.gov.in"),
+            [],
         )
 
     def test_scraper_service_scrape_source_with_override(self):
@@ -240,6 +242,69 @@ class TestScraperService(unittest.TestCase):
         service = OpportunityScraperService()
         with self.assertRaises(ValueError):
             service.scrape_source("non_existent_source")
+
+    def test_parse_scraped_date_multiformat(self):
+        """Verify robust date parsing across numeric and English textual date representations."""
+        self.assertEqual(parse_scraped_date("Last Date: 31/12/2026"), "31/12/2026")
+        self.assertEqual(parse_scraped_date("Deadline: 2026-11-30"), "2026-11-30")
+        self.assertEqual(parse_scraped_date("Submission closing: 15 Oct 2026"), "15 Oct 2026")
+        self.assertEqual(parse_scraped_date("Ends on 31st December 2026"), "31st December 2026")
+        self.assertEqual(parse_scraped_date("October 15, 2026"), "October 15, 2026")
+        self.assertIsNone(parse_scraped_date("Rolling admission without fixed deadline"))
+
+    def test_smart_india_hackathon_adapter(self):
+        """Verify SIH adapter parses problem statements, domain themes, and emits innovation_challenge."""
+        meta = SourceMetadata(
+            source_id="sih_challenges",
+            name="Smart India Hackathon",
+            base_url="https://sih.gov.in",
+            supported_categories=["innovation_challenge", "hackathon"],
+        )
+        adapter = SmartIndiaHackathonAdapter(meta)
+        html = """
+        <div class="problem-statement">
+            <h3 class="ps-title">AI Driven Traffic Optimization for Smart Cities</h3>
+            <div class="ministry">Ministry of Housing and Urban Affairs</div>
+            <div class="bucket">Smart Vehicles & Transportation</div>
+            <div class="deadline">Last Date: 15/10/2026</div>
+            <a href="/ps/view?id=SIH1234">View Problem</a>
+        </div>
+        """
+        opps = adapter.parse_html(html, "https://sih.gov.in/problem-statements")
+        self.assertEqual(len(opps), 1)
+        opp = opps[0]
+        self.assertEqual(opp.category, "innovation_challenge")
+        self.assertEqual(opp.title, "AI Driven Traffic Optimization for Smart Cities")
+        self.assertEqual(opp.organization, "Ministry of Housing and Urban Affairs")
+        self.assertEqual(opp.deadline, "15/10/2026")
+        self.assertEqual(opp.category_metadata["theme"], "Smart Vehicles & Transportation")
+        self.assertEqual(opp.application_url, "https://sih.gov.in/ps/view?id=SIH1234")
+
+    def test_ugc_notice_adapter(self):
+        """Verify UGC adapter parses circulars and maps to fellowship or grant."""
+        meta = SourceMetadata(
+            source_id="ugc_fellowships",
+            name="UGC Notices",
+            base_url="https://www.ugc.gov.in",
+            supported_categories=["fellowship", "grant"],
+        )
+        adapter = UGCNoticeAdapter(meta)
+        html = """
+        <tr class="circular-row">
+            <td><a href="/notices/savs-fellowship.pdf" class="title">National Fellowship for Higher Education of ST Students 2026-27</a></td>
+            <td><span class="circular-date">Deadline: 30 Nov 2026</span></td>
+        </tr>
+        <tr class="circular-row">
+            <td><a href="/notices/minor-research-grant.pdf" class="title">Major and Minor Research Grant Scheme Guidelines</a></td>
+            <td><span class="circular-date">Deadline: 15/12/2026</span></td>
+        </tr>
+        """
+        opps = adapter.parse_html(html, "https://www.ugc.gov.in/notices")
+        self.assertEqual(len(opps), 2)
+        self.assertEqual(opps[0].category, "fellowship")
+        self.assertEqual(opps[0].deadline, "30 Nov 2026")
+        self.assertEqual(opps[1].category, "grant")
+        self.assertEqual(opps[1].deadline, "15/12/2026")
 
 
 if __name__ == "__main__":

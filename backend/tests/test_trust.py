@@ -13,8 +13,6 @@ import unittest
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.services.trust_checker import (
-    TrustChecker,
-    TrustReport,
     check_opportunity_trust,
     is_academic_domain,
     is_official_government_domain,
@@ -176,6 +174,46 @@ class TestTrustCheckerService(unittest.TestCase):
         self.assertNotEqual(report.status, "SUSPICIOUS")
         self.assertFalse(
             any("Upfront fee requirement" in sig for sig in report.negative_indicators)
+        )
+
+    def test_anti_fraud_warning_with_fee_mention_not_flagged(self):
+        """Official notices warning applicants against fraudulent fee demands must not be flagged."""
+        opp = {
+            "id": "bhel-advisory-notice",
+            "title": "Graduate Engineering Trainee Recruitment 2026",
+            "category": "job",
+            "organization": "Bharat Heavy Electricals Limited",
+            "description": "Public Notice: Beware of fraudulent recruitment agents demanding training fees of Rs. 5000. BHEL never charges any fee or deposit for recruitment.",
+            "source_url": "https://careers.bhel.in/jobs",
+            "application_url": "https://careers.bhel.in/apply",
+        }
+        report = check_opportunity_trust(opp)
+        self.assertNotEqual(report.status, "SUSPICIOUS")
+        self.assertFalse(
+            any("Upfront fee requirement" in sig for sig in report.negative_indicators)
+        )
+        self.assertTrue(any("anti-fraud" in sig.lower() for sig in report.positive_indicators))
+
+    def test_anti_phishing_security_advisory_not_flagged(self):
+        """Security advisory warning candidates never to share OTP/ATM PIN must not be flagged as phishing."""
+        opp = {
+            "id": "nsp-scholarship-advisory",
+            "title": "National Means-cum-Merit Scholarship Scheme",
+            "category": "scholarship",
+            "organization": "Department of School Education and Literacy",
+            "description": "Notice: Never share your OTP, ATM PIN, or bank password with unauthorized persons. NSP officers will never ask for your password.",
+            "source_url": "https://scholarships.gov.in/schemes",
+            "application_url": "https://scholarships.gov.in/apply",
+        }
+        report = check_opportunity_trust(opp)
+        self.assertEqual(report.status, "VERIFIED")
+        self.assertFalse(
+            any(
+                "Demands sensitive banking credentials" in sig for sig in report.negative_indicators
+            )
+        )
+        self.assertTrue(
+            any("security advisory" in sig.lower() for sig in report.positive_indicators)
         )
 
 
