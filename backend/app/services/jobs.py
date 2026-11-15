@@ -17,7 +17,7 @@ def enqueue(db, owner, kind, arguments, dedupe=None):
     old = db.scalar(select(Job).where(Job.owner_id == owner, Job.dedupe_key == key))
     if (
         old
-        and kind == "discovery"
+        and kind in {"discovery", "source_discovery"}
         and dedupe is None
         and old.status in {"COMPLETED", "DEAD_LETTER", "CANCELLED"}
     ):
@@ -154,6 +154,22 @@ def recover():
         )
         for row in rows:
             row.status = "DEAD_LETTER" if row.attempts >= 3 else "RETRY"
+            if row.payload.get("kind") == "notice":
+                from app.repositories import documents
+
+                documents.transition(
+                    "extracted_notices",
+                    row.payload["arguments"]["document_id"],
+                    row.owner_id,
+                    {"UPLOADED", "PROCESSING", "RETRY"},
+                    dict(
+                        status="FAILED" if row.status == "DEAD_LETTER" else "RETRY",
+                        error="Worker lease expired; retry exhausted"
+                        if row.status == "DEAD_LETTER"
+                        else "Worker interrupted; retry pending",
+                    ),
+                )
+            row.lease_until = None
             if row.status == "RETRY":
                 db.add(
                     Outbox(
@@ -214,6 +230,10 @@ def perform(kind, args, owner):
         from app.integrations import member1
 
         return member1.discover_feed(args["feed_url"], owner)
+    if kind == "source_discovery":
+        from app.integrations import member1
+
+        return member1.discover_source(args["source_id"], owner)
     if kind == "judge0":
         from app.services.judge0 import execute as judge
 

@@ -33,4 +33,10 @@ class ResumeAnalysis(BaseModel):
     document_id: str
     skills: list[str]
     evidence: list[SkillClaim]
+    parsed_skills: list[str] | None = None
+    experience_years: float | None = Field(None, ge=0)
+    education: list[dict] | None = None
+    readiness_score: float | None = Field(None, ge=0, le=100)
+    recommendations: list[str] | None = None
+    warnings: list[str] = Field(default_factory=list)
     disclaimer: str

@@ -113,14 +113,14 @@ def artifacts():
                 errors="503 when not ready",
                 frontend_consumer="Health monitoring",
                 scope="Operational",
-                coverage="Stage 1 isolated migrated startup smoke",
+                coverage="Phase 2 isolated migrated startup smoke",
             )
         )
     rows.sort(key=lambda row: (row["route"], row["method"]))
 
     contract = dict(
-        title="AVSAR Stage 1 observed backend contracts",
-        version="stage1",
+        title="AVSAR Phase 2 observed backend contracts",
+        version="phase2",
         definitions=schemas,
         openapi_reference="openapi.json",
         endpoints=rows,
@@ -138,7 +138,7 @@ def artifacts():
     # Contract references use definitions; OpenAPI keeps its own components references.
     contract = json.loads(json.dumps(contract).replace("#/components/schemas/", "#/definitions/"))
     lines = [
-        "# Backend endpoint inventory - Stage 1",
+        "# Backend endpoint inventory - Phase 2",
         "",
         "Generated from route decorators and current OpenAPI; no duplicate prefix is added. Includes hidden development aliases. Full request schemas/parameters are in API_CONTRACTS.json and openapi.json. Every route has handler, storage, status and coverage information below. Registration does not establish live provider readiness.",
         "",
@@ -178,7 +178,7 @@ def artifacts():
         "",
         "Shared errors: " + rows[0]["errors"],
         "",
-        "Frontend consumers: completed Member 3 code not verified here. The local client uses /api/v1; see STAGE1_REPORT.md for exact workflow requirements.",
+        "Frontend consumers: completed Member 3 code not verified here. The local client uses /api/v1; see INTEGRATION_CONTRACTS.md for exact workflow requirements.",
     ]
 
     return {
@@ -208,9 +208,9 @@ STORAGE = {
 
 STATUS = {
     "notices": "Conditional: deterministic text draft or configured AI PDF adapter; human confirmation required",
-    "resume": "Current lexical analyzer integrated; newer Member 1 result contract unavailable",
-    "trust": "Current risk report integrated; newer trust-score contract unavailable",
-    "discovery": "Configured public RSS only; fuzzy ingestion policy pending",
+    "resume": "Member 1 deterministic analyzer integrated through owned result adapter",
+    "trust": "Member 1 source assessment and independent backend risk evidence integrated",
+    "discovery": "Configured RSS and operator-enabled source adapters; duplicate reviews never auto-merge",
     "legacy": "Compatibility; recovery/MFA and prepare/answer may return 503",
 }
 

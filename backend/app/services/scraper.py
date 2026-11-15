@@ -6,6 +6,7 @@ Respects robots.txt principles, rate-limiting, source provenance, and network er
 """
 
 from __future__ import annotations
+from app.integrations.rss_ingestion import discover_feed as discover_feed
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -44,6 +45,7 @@ DEFAULT_USER_AGENT = "AVSAR-OpportunityDiscovery/1.0 (+https://avsar.gov.in/bot)
 # Data Models
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ScrapedOpportunity:
     """Standardized representation of an opportunity extracted by scrapers."""
@@ -64,9 +66,7 @@ class ScrapedOpportunity:
     stipend_or_benefit: Optional[str] = None
     trust_status: str = "UNVERIFIED"
     category_metadata: Dict[str, Any] = field(default_factory=dict)
-    scraped_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    scraped_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def __post_init__(self) -> None:
         if self.category not in CANONICAL_CATEGORIES:
@@ -128,6 +128,7 @@ class SourceMetadata:
 # Security & Ethical Crawler Guard
 # ---------------------------------------------------------------------------
 
+
 class EthicalCrawlerGuard:
     """Enforces rate limiting, domain boundaries, and SSRF protection."""
 
@@ -179,6 +180,7 @@ class EthicalCrawlerGuard:
 # ---------------------------------------------------------------------------
 # Source Registry
 # ---------------------------------------------------------------------------
+
 
 class SourceRegistry:
     """Registry managing available opportunity sources and their configurations."""
@@ -279,6 +281,7 @@ class SourceRegistry:
 # Base Source Adapter
 # ---------------------------------------------------------------------------
 
+
 class BaseSourceAdapter:
     """Abstract base adapter for fetching and parsing opportunities from web sources."""
 
@@ -339,6 +342,7 @@ class BaseSourceAdapter:
 # Specialized Source Adapters
 # ---------------------------------------------------------------------------
 
+
 class NationalScholarshipAdapter(BaseSourceAdapter):
     """Adapter for National Scholarship Portal and government scheme feeds."""
 
@@ -347,7 +351,9 @@ class NationalScholarshipAdapter(BaseSourceAdapter):
         opportunities: List[ScrapedOpportunity] = []
 
         # Find scheme/scholarship cards or table rows
-        items = soup.select(".scheme-item, .scholarship-card, .scheme-row, tr.scheme-data, div.scheme")
+        items = soup.select(
+            ".scheme-item, .scholarship-card, .scheme-row, tr.scheme-data, div.scheme"
+        )
         if not items:
             # Fallback to general cards or article tags
             items = soup.select("article, .card, .post-item")
@@ -445,7 +451,9 @@ class NATSApprenticeshipAdapter(BaseSourceAdapter):
             deadline = None
             date_tag = item.select_one(".deadline, .closing-date, .last-date")
             if date_tag:
-                m = re.search(r"\b(\d{1,2}[/-]\d{1,2}[/-]\d{4}|\d{4}-\d{2}-\d{2})\b", date_tag.get_text())
+                m = re.search(
+                    r"\b(\d{1,2}[/-]\d{1,2}[/-]\d{4}|\d{4}-\d{2}-\d{2})\b", date_tag.get_text()
+                )
                 if m:
                     deadline = m.group(1)
 
@@ -479,7 +487,9 @@ class DevpostHackathonAdapter(BaseSourceAdapter):
         soup = BeautifulSoup(html_content, "html.parser")
         opportunities: List[ScrapedOpportunity] = []
 
-        items = soup.select(".hackathon-tile, .challenge-listing, .opportunity-tile, article.hackathon")
+        items = soup.select(
+            ".hackathon-tile, .challenge-listing, .opportunity-tile, article.hackathon"
+        )
         if not items:
             items = soup.select(".card, article, div.content-item")
 
@@ -503,7 +513,9 @@ class DevpostHackathonAdapter(BaseSourceAdapter):
             deadline_tag = item.select_one(".deadline, .submission-period, .time-left")
             deadline = None
             if deadline_tag:
-                m = re.search(r"\b(\d{1,2}[/-]\d{1,2}[/-]\d{4}|\d{4}-\d{2}-\d{2})\b", deadline_tag.get_text())
+                m = re.search(
+                    r"\b(\d{1,2}[/-]\d{1,2}[/-]\d{4}|\d{4}-\d{2}-\d{2})\b", deadline_tag.get_text()
+                )
                 if m:
                     deadline = m.group(1)
 
@@ -605,6 +617,7 @@ class GenericHTMLAdapter(BaseSourceAdapter):
 # High-Level Scraper Service
 # ---------------------------------------------------------------------------
 
+
 class OpportunityScraperService:
     """High-level service orchestrating adapters and source registry."""
 
@@ -652,47 +665,3 @@ class OpportunityScraperService:
             return adapter.parse_html(html_override, url)
 
         return adapter.collect(url_override)
-
-
-"""Bounded public RSS discovery; not a general multi-site scraper."""
-
-from app.models.base import now
-from app.services.catalog import digest
-
-
-def discover_feed(feed_url, owner):
-    args = {"feed_url": feed_url}
-    from defusedxml import ElementTree
-    from app.services.safe_fetch import fetch
-    from app.services.catalog import create_opportunity
-    from app.repositories import documents
-
-    root = ElementTree.fromstring(fetch(args["feed_url"]))
-    results = []
-    for item in root.findall(".//item")[:50]:
-        title, link = item.findtext("title"), item.findtext("link")
-        if title:
-            from app.schemas.persistent import OpportunityInput
-
-            data = OpportunityInput(
-                title=title[:300],
-                description=(item.findtext("description") or "")[:30000],
-                application_url=link or None,
-                source_url=args["feed_url"],
-            ).model_dump(mode="json")
-            raw_id = digest([args["feed_url"], title, link])[:32]
-            documents.put(
-                "raw_listings",
-                raw_id,
-                dict(owner_id=owner, source_url=args["feed_url"], title=title, link=link),
-                insert_only=True,
-            )
-            results.append(create_opportunity(data)["id"])
-    record = dict(
-        owner_id=owner,
-        opportunity_ids=results,
-        connector="PUBLIC_RSS",
-        completed_at=now().isoformat(),
-    )
-    documents.put("discovery_jobs", digest([owner, args])[:32], record)
-    return record

@@ -6,11 +6,12 @@ and detects scam / fraud indicators (upfront fees, suspicious public emails, cre
 """
 
 from __future__ import annotations
+from app.integrations.risk_compat import analyze as analyze
 
 from dataclasses import dataclass, field
 import logging
 import re
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -104,7 +105,9 @@ def extract_domain(url: Optional[str]) -> Optional[str]:
 
 def is_official_government_domain(domain_or_url: Optional[str]) -> bool:
     """Checks whether the domain is an official Indian government portal (.gov.in / .nic.in)."""
-    domain = extract_domain(domain_or_url) if domain_or_url and "://" in domain_or_url else domain_or_url
+    domain = (
+        extract_domain(domain_or_url) if domain_or_url and "://" in domain_or_url else domain_or_url
+    )
     if not domain:
         return False
     domain = domain.lower().strip()
@@ -115,7 +118,9 @@ def is_official_government_domain(domain_or_url: Optional[str]) -> bool:
 
 def is_academic_domain(domain_or_url: Optional[str]) -> bool:
     """Checks whether the domain is an accredited Indian academic / research institution."""
-    domain = extract_domain(domain_or_url) if domain_or_url and "://" in domain_or_url else domain_or_url
+    domain = (
+        extract_domain(domain_or_url) if domain_or_url and "://" in domain_or_url else domain_or_url
+    )
     if not domain:
         return False
     domain = domain.lower().strip()
@@ -127,7 +132,9 @@ def is_academic_domain(domain_or_url: Optional[str]) -> bool:
 
 def is_recognized_platform(domain_or_url: Optional[str]) -> bool:
     """Checks whether the domain is a recognized public competition/hackathon platform."""
-    domain = extract_domain(domain_or_url) if domain_or_url and "://" in domain_or_url else domain_or_url
+    domain = (
+        extract_domain(domain_or_url) if domain_or_url and "://" in domain_or_url else domain_or_url
+    )
     if not domain:
         return False
     domain = domain.lower().strip()
@@ -167,7 +174,9 @@ class TrustChecker:
         source_url = opportunity.get("source_url")
         app_url = opportunity.get("application_url") or source_url
         description = str(opportunity.get("description") or "")
-        combined_text = f"{title}\n{organization}\n{description}\n{opportunity.get('stipend_or_benefit') or ''}"
+        combined_text = (
+            f"{title}\n{organization}\n{description}\n{opportunity.get('stipend_or_benefit') or ''}"
+        )
 
         source_domain = extract_domain(source_url)
         app_domain = extract_domain(app_url)
@@ -182,7 +191,9 @@ class TrustChecker:
         # -------------------------------------------------------------------
         # 1. Domain & Origin Verification
         # -------------------------------------------------------------------
-        is_gov = is_official_government_domain(app_domain) or is_official_government_domain(source_domain)
+        is_gov = is_official_government_domain(app_domain) or is_official_government_domain(
+            source_domain
+        )
         is_edu = is_academic_domain(app_domain) or is_academic_domain(source_domain)
         is_platform = is_recognized_platform(app_domain) or is_recognized_platform(source_domain)
 
@@ -220,26 +231,33 @@ class TrustChecker:
         # 2. Scam & Fraud Indicators
         # -------------------------------------------------------------------
 
+        from app.integrations.negation import affirmative_text
+
+        risk_text = affirmative_text(combined_text)
         # A. Upfront fee for employment, scholarship or selection
         # Note: Hackathons may have registration fees, but jobs/scholarships should not demand "placement fees"
         fee_match = re.search(
-            r"\b(?:(?:security|processing|registration|joining|training)\s+fees?|deposit|charges?)\s*(?:of\s*)?(?:rs\.?|inr|₹)?\s*\d+\b",
-            combined_text,
+            r"\b(?:(?:security|processing|registration|joining|training)\s+fees?|deposit|charges?)\s*(?:of\s*)?(?:rs\.?|inr|Ã¢â€šÂ¹)?\s*\d+\b",
+            risk_text,
             re.I,
         )
         guarantee_match = re.search(
             r"\b(?:guaranteed?\s+(?:job|placement|selection|visa)|100%\s+placement)\b",
-            combined_text,
+            risk_text,
             re.I,
         )
         # Avoid false positives where text says "no registration fee" or "free application"
         negated_fee = re.search(
             r"\b(?:no|zero|without|not\s+required|free)\s+(?:registration|application|security)?\s*(?:fee|deposit|charge)\b",
-            combined_text,
+            risk_text,
             re.I,
         )
 
-        if fee_match and not negated_fee and (guarantee_match or category in {"job", "internship", "scholarship"}):
+        if (
+            fee_match
+            and not negated_fee
+            and (guarantee_match or category in {"job", "internship", "scholarship"})
+        ):
             score -= 40.0
             has_critical_red_flag = True
             sig = f"Upfront fee requirement detected for opportunity ('{fee_match.group(0)}')"
@@ -262,7 +280,9 @@ class TrustChecker:
                 negative_indicators.append(sig)
             else:
                 score -= 10.0
-                negative_indicators.append(f"Uses public email address ({email_addr}) rather than organizational domain")
+                negative_indicators.append(
+                    f"Uses public email address ({email_addr}) rather than organizational domain"
+                )
 
         # C. Urgent financial transfer requests
         urgency_match = re.search(
@@ -280,7 +300,7 @@ class TrustChecker:
         # D. Sensitive credential phishing
         phishing_match = re.search(
             r"\b(?:OTP|bank\s+account\s+password|ATM\s+PIN|CVV|credit\s+card\s+number|net\s+banking\s+password)\b",
-            combined_text,
+            risk_text,
             re.I,
         )
         if phishing_match:
@@ -292,7 +312,7 @@ class TrustChecker:
 
         # E. Unrealistic compensation / get-rich-quick
         unrealistic_match = re.search(
-            r"\b(?:earn\s+(?:rs\.?|inr|₹)?\s*\d{5,}\s+(?:per|a)\s+day|earn\s+lakhs?\s+without\s+work|no\s+skills?\s+earn\s+money)\b",
+            r"\b(?:earn\s+(?:rs\.?|inr|Ã¢â€šÂ¹)?\s*\d{5,}\s+(?:per|a)\s+day|earn\s+lakhs?\s+without\s+work|no\s+skills?\s+earn\s+money)\b",
             combined_text,
             re.I,
         )
@@ -340,55 +360,3 @@ _checker_instance = TrustChecker()
 def check_opportunity_trust(opportunity: Dict[str, Any]) -> TrustReport:
     """Convenience function evaluating trust for an opportunity dictionary."""
     return _checker_instance.evaluate(opportunity)
-
-
-from app.models.trust_report import TrustReport as BackendTrustReport
-import re
-from datetime import date
-from urllib.parse import urlsplit
-
-
-def analyze(data):
-    text = " ".join(str(data.get(k) or "") for k in ("title", "description", "benefit"))
-    evidence = []
-
-    def add(kind, points, quote):
-        evidence.append(dict(signal=kind, points=points, quote=quote))
-
-    # Remove explicitly negated fee clauses before detecting requests for payment.
-    fee_text = re.sub(
-        r"\b(?:no|without|zero)\s+(?:(?:registration|application|processing|upfront|security)\s+)?(?:fees?|deposits?)\b|\b(?:fees?|deposits?)\s+(?:is\s+|are\s+)?not\s+required\b|\bfree\s+(?:registration|application)\b",
-        "",
-        text,
-        flags=re.I,
-    )
-    fee = re.search(
-        r"\b(?:(?:registration|application|processing|upfront|security)\s+(?:fees?|deposits?)|pay.{0,20}(?:fee|deposit))\b",
-        fee_text,
-        re.I,
-    )
-    if fee:
-        add("UPFRONT_PAYMENT", 40, fee.group())
-    guarantee = re.search(r"\bguaranteed?\s+(?:job|placement|selection)\b", text, re.I)
-    if guarantee:
-        add("GUARANTEED_SELECTION", 20, guarantee.group())
-    sensitive = re.search(r"\b(?:OTP|bank[ -]?password|credit[ -]?card)\b", text, re.I)
-    if sensitive:
-        add("SENSITIVE_INFORMATION", 50, sensitive.group())
-    application, company = data.get("application_url"), data.get("company_url")
-    if application and company and urlsplit(application).hostname != urlsplit(company).hostname:
-        add(
-            "DOMAIN_DIFFERENCE",
-            10,
-            "May be a legitimate third-party applicant tracking system; review required",
-        )
-    score = min(100, sum(e["points"] for e in evidence))
-    deadline = data.get("deadline")
-    expired = bool(deadline and date.fromisoformat(deadline) < date.today())
-    return BackendTrustReport(
-        risk_score=score,
-        risk_level="HIGH" if score >= 60 else "REVIEW" if score else "NO_SIGNALS_DETECTED",
-        verification_status="EXPIRED" if expired else "UNKNOWN",
-        evidence=evidence,
-        disclaimer="Heuristic signals are not verified fraud classification. Reachability does not verify an employer.",
-    ).model_dump(mode="json")

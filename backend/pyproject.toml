@@ -8,7 +8,7 @@ dependencies = {file = ["requirements.txt"]}
 [tool.setuptools.packages.find]
 include = ["app*"]
 [tool.pytest.ini_options]
-testpaths = ["app/tests"]
+testpaths = ["app/tests", "tests/test_resume.py", "tests/test_scraper.py", "tests/test_trust.py"]
 pythonpath = ["."]
 [tool.ruff]
 target-version = "py312"

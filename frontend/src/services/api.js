@@ -1,3 +1,4 @@
+import { submissionRequest } from "@/services/application-contract.mjs";
 import { getAuthProvider, getStoredLocalToken, resolveAccessToken } from "@/services/auth-token.mjs";
 import { getSupabaseClient } from "@/services/supabase";
 
@@ -14,7 +15,7 @@ export class ApiError extends Error {
 }
 
 function messageFromPayload(payload, status) {
-  const detail = payload?.detail ?? payload?.message ?? payload?.error;
+  const detail = payload?.error?.message ?? payload?.detail ?? payload?.message;
   if (typeof detail === "string") return detail;
   if (Array.isArray(detail)) return detail.map((item) => item.msg || item.message || "Invalid input").join(" · ");
   return `Request failed (${status})`;
@@ -121,11 +122,16 @@ export const api = {
   opportunity: (id) => request(`/opportunities/${encodeURIComponent(id)}`),
   recommendations: (filters = {}) => requestPage(`/recommendations${query(filters)}`),
   eligibility: (id) => request(`/eligibility/check/${encodeURIComponent(id)}`, { method: "POST" }),
+  analyzeTrust: (id) => request("/verification/analyze", { method: "POST", body: { opportunity_id: id } }),
   trust: (id) => request(`/trust/verify/${encodeURIComponent(id)}`),
   applications: (filters = {}) => request(`/applications${query(filters)}`),
   application: (id) => request(`/applications/${encodeURIComponent(id)}`),
   createApplication: (opportunityId) => request("/applications", { method: "POST", body: { opportunity_id: opportunityId } }),
   updateApplication: (id, revision, status) => request(`/applications/${encodeURIComponent(id)}`, { method: "PATCH", body: { revision, status } }),
+  updateApplicationMaterial: (id, revision, material) => request(`/applications/${encodeURIComponent(id)}`, { method: "PATCH", body: { revision, material } }),
+  approveApplication: (id, revision) => request(`/applications/${encodeURIComponent(id)}/approve`, { method: "POST", body: { revision } }),
+  submitApplication: (id, revision, key) => { const call = submissionRequest(id, revision, key); return request(call.path, call.options); },
+  jobResult: (id) => request(`/jobs/${encodeURIComponent(id)}/result`),
   calendar: (filters = {}) => request(`/calendar/deadlines${query(filters)}`),
   notifications: (filters = {}) => request(`/notifications${query(filters)}`),
   uploadResume: (file) => {

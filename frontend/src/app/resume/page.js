@@ -38,15 +38,13 @@ export default function ResumePage() {
       let job = null;
       for (let attempt = 0; attempt < 30; attempt += 1) {
         setJobStatus(attempt === 0 ? "Processing" : `Processing (${attempt * 2}s)`);
-        job = await api.job(accepted.job_id);
+        job = await api.jobResult(accepted.job_id);
         if (job.status === "COMPLETED") break;
         if (["DEAD_LETTER", "CANCELLED"].includes(job.status)) throw new Error("Resume analysis did not complete. Please try another supported file.");
         await wait(2000);
       }
       if (job?.status !== "COMPLETED") throw new Error("Resume analysis is taking longer than expected. Check back in a moment and upload again only if the result does not appear.");
-      const progress = await api.skillProgress();
-      const record = Array.isArray(progress) ? progress.find((item) => item.id === accepted.document_id) : null;
-      const result = job.result || record;
+      const result = job.result;
       if (!result) throw new Error("The job completed, but no resume analysis was returned.");
       setAnalysis(result);
       setJobStatus("Completed");
@@ -72,6 +70,7 @@ export default function ResumePage() {
       <div>
         <ResumeUploader onUpload={upload} busy={busy} />
         {busy && <Loading label={`Resume ${jobStatus.toLowerCase()}…`} />}
+        {analysis && <section className="panel"><h2>Deterministic resume analysis</h2><p>Readiness (rule-based): {analysis.readiness_score ?? "Unavailable"}</p><p>Experience estimate: {analysis.experience_years ?? "Unknown"} years</p><pre>{JSON.stringify(analysis.education || [], null, 2)}</pre><ul>{(analysis.recommendations || []).map((item) => <li key={item}>{item}</li>)}</ul>{(analysis.warnings || []).map((item) => <p key={item}>{item}</p>)}</section>}
         {analysis && <section className="panel analysis-panel"><div className="panel-heading"><span className="panel-icon"><FileText size={20} /></span><div><h2>Extracted skill claims</h2><p>Review these claims before adding them to your profile.</p></div></div>{skills.length ? <div className="skill-tags success-tags">{skills.map((skill) => <span key={skill}>{skill}</span>)}</div> : <div className="empty-state compact"><h3>No supported skill claims detected</h3><p>The analyzer uses a limited rule-based vocabulary and may miss relevant skills.</p></div>}<p className="disclaimer">{analysis.disclaimer || "Resume extraction is not a verification of skills or experience."}</p>
           <div className="resume-compare"><label><span className="field-label">Compare with an opportunity</span><select className="form-control" value={selectedOpportunity} onChange={(event) => setSelectedOpportunity(event.target.value)}><option value="">Choose an opportunity</option>{opportunities.map((item) => <option value={item.id} key={item.id}>{item.title}</option>)}</select></label><button className="button button-secondary" type="button" onClick={compare} disabled={!selectedOpportunity || comparing}>{comparing ? "Comparing…" : "Compare skills"}</button></div>
           {comparison && <div className="analysis-columns"><div><h3>Required skills matched</h3><div className="skill-tags success-tags">{comparison.matched_required?.length ? comparison.matched_required.map((skill) => <span key={skill}>{skill}</span>) : <p>None identified</p>}</div></div><div><h3>Required skill gaps</h3><div className="skill-tags warning-tags">{comparison.missing_required?.length ? comparison.missing_required.map((skill) => <span key={skill}>{skill}</span>) : <p>No required skill gaps identified</p>}</div></div><div><h3>Preferred skills to explore</h3><div className="skill-tags">{comparison.missing_preferred?.length ? comparison.missing_preferred.map((skill) => <span key={skill}>{skill}</span>) : <p>None identified</p>}</div></div>{Number.isFinite(comparison.score) && <p>Required skill match: {Math.round(comparison.score)}%</p>}</div>}

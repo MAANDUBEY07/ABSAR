@@ -50,7 +50,7 @@ export default function OpportunityDetailPage() {
   }
   async function checkTrust() {
     setCheckingTrust(true); setError("");
-    try { setTrust(await api.trust(id)); }
+    try { setTrust(await api.analyzeTrust(id)); }
     catch (requestError) { setError(requestError.message); }
     finally { setCheckingTrust(false); }
   }
@@ -76,7 +76,7 @@ export default function OpportunityDetailPage() {
             <button className="button button-secondary" type="button" onClick={checkEligibility} disabled={checking}>{checking ? "Checking…" : "Check my eligibility"}</button>
             {eligibility && <div className="eligibility-result"><EligibilityBadge status={eligibility.api_status} /><p>{eligibility.summary}</p>{Number.isFinite(eligibility.score) && <p><strong>Criteria coverage: {Math.round(eligibility.score)}%</strong></p>}{eligibility.reasons?.length > 0 && <ul className="reason-list">{eligibility.reasons.map((reason, index) => <li key={`${reason}-${index}`}>{reason}</li>)}</ul>}{eligibility.missing_fields?.length > 0 && <p><strong>Profile information needed:</strong> {eligibility.missing_fields.join(", ")}</p>}</div>}
           </section>
-          <section className="detail-section"><h2>Source and verification</h2><div className="source-details"><span>Source status</span><TrustBadge status={opportunity.verification_status} />{opportunity.source_url && <a href={opportunity.source_url} target="_blank" rel="noreferrer">Open original source <ArrowUpRight size={13} /></a>}</div><button className="button button-secondary" type="button" onClick={checkTrust} disabled={checkingTrust}><ShieldCheck size={15} />{checkingTrust ? "Checking source signals…" : "Review source signals"}</button>
+          <section className="detail-section"><h2>Source and verification</h2><div className="source-details"><span>Source status</span><TrustBadge status={opportunity.verification_status} report={trust} />{opportunity.source_url && <a href={opportunity.source_url} target="_blank" rel="noreferrer">Open original source <ArrowUpRight size={13} /></a>}</div><button className="button button-secondary" type="button" onClick={checkTrust} disabled={checkingTrust}><ShieldCheck size={15} />{checkingTrust ? "Checking source signals…" : "Review source signals"}</button>
             {trust && <div className="trust-report"><p><strong>Risk signals: {trust.risk_level || "Not assessed"}</strong>{Number.isFinite(trust.risk_score) && <> · score {trust.risk_score}/100</>}</p><p>Verification status: {trust.verification_status || "Unknown"}</p>{trust.evidence?.length > 0 ? <ul className="reason-list">{trust.evidence.map((item, index) => <li key={`${item.signal}-${index}`}><strong>{item.signal}</strong>{item.quote ? ` — “${item.quote}”` : ""}</li>)}</ul> : <p>No rule-based risk signals were found in the checked fields.</p>}<p className="disclaimer">{trust.disclaimer || "Risk signals are not a verified fraud classification. Confirm details with the original source."}</p></div>}
           </section>
         </article>

@@ -45,6 +45,13 @@ class Requirements(Input):
     graduation_years: list[int] = Field(default_factory=list)
     degrees: list[str] = Field(default_factory=list)
     branches: list[str] = Field(default_factory=list)
+    min_age: int | None = Field(None, ge=0, le=120)
+    max_age: int | None = Field(None, ge=0, le=120)
+    max_annual_income: float | None = Field(None, ge=0)
+    genders: list[str] = Field(default_factory=list, max_length=20)
+    social_categories: list[str] = Field(default_factory=list, max_length=50)
+    domicile_states: list[str] = Field(default_factory=list, max_length=100)
+    required_disability_status: bool | None = None
     min_cgpa: float | None = Field(None, ge=0, le=10)
     locations: list[str] = Field(default_factory=list)
     required_skills: list[str] = Field(default_factory=list)

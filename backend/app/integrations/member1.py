@@ -35,6 +35,8 @@ def _invoke(module_name, function_name, *args, **kwargs):
 def _payload(value):
     if isinstance(value, BaseModel):
         return value.model_dump(mode="json")
+    if callable(getattr(value, "to_dict", None)):
+        return value.to_dict()
     if isinstance(value, dict):
         return dict(value)
     raise AIServiceUnavailable("Member 1 service returned an incompatible result")
@@ -49,11 +51,39 @@ def analyze_trust(opportunity):
 
 
 def analyze_resume(text, owner_id, document_id):
-    result = _invoke("app.services.resume_analyzer", "analyze_resume", text, owner_id, document_id)
+    import inspect
+
+    function = getattr(import_module("app.services.resume_analyzer"), "analyze_resume")
+    signature = inspect.signature(getattr(function, "side_effect", None) or function)
     try:
-        analysis = ResumeAnalysis.model_validate(_payload(result))
+        signature.bind(text, owner_id, document_id)
+        legacy = True
+    except TypeError:
+        legacy = False
+    result = (
+        _invoke("app.services.resume_analyzer", "analyze_resume", text, owner_id, document_id)
+        if legacy
+        else _invoke("app.services.resume_analyzer", "analyze_resume", text)
+    )
+    try:
+        payload = _payload(result)
+        if "parsed_skills" in payload and "owner_id" not in payload:
+            from app.integrations.resume_claims import claims
+
+            payload = dict(
+                payload,
+                owner_id=owner_id,
+                document_id=document_id,
+                skills=payload["parsed_skills"],
+                evidence=claims(text),
+                warnings=[
+                    "Rule-based estimates; absence of evidence is not proof of no experience"
+                ],
+                disclaimer="Deterministic resume claims and completeness score; not verified qualifications",
+            )
+        analysis = ResumeAnalysis.model_validate(payload)
         if analysis.owner_id != owner_id or analysis.document_id != document_id:
-            raise ValueError("Provider result crossed the backend ownership boundary")
+            raise ValueError("Provider result crossed ownership boundary")
         return analysis.model_dump(mode="json")
     except Exception:
         raise AIServiceUnavailable(
@@ -86,3 +116,42 @@ def compare_opportunities(candidate, existing, config=None):
     return _invoke(
         "app.services.duplicate_detector", "compare_opportunities", candidate, existing, config
     )
+
+
+def ingest_scraped(result):
+    from app.schemas.opportunity import OpportunityInput
+    from app.services.catalog import create_opportunity
+
+    source = _payload(result)
+    data = {key: value for key, value in source.items() if key in OpportunityInput.model_fields}
+    data.update(
+        source_attribution=source.get("source_name"),
+        retrieved_at=source.get("scraped_at"),
+        benefit=source.get("stipend_or_benefit"),
+        provenance=source,
+    )
+    data["requirements"] = dict(
+        confirmed=False, required_skills=source.get("required_skills") or []
+    )
+    return create_opportunity(data)
+
+
+def discover_source(source_id, owner_id):
+    from types import SimpleNamespace
+    from app.services.scraper import OpportunityScraperService
+    from app.services.safe_fetch import fetch
+
+    class PinnedSession:
+        headers = {}
+
+        def get(self, url, timeout=10):
+            return SimpleNamespace(
+                status_code=200, text=fetch(url).decode("utf-8", errors="replace")
+            )
+
+    adapter = OpportunityScraperService().get_adapter_for_source(source_id, session=PinnedSession())
+    if adapter is None:
+        raise AIServiceUnavailable("Unknown registered source")
+    results = adapter.collect()
+    ids = [ingest_scraped(result)["id"] for result in results[:50]]
+    return dict(owner_id=owner_id, opportunity_ids=ids, source_id=source_id)

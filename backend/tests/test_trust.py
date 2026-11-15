@@ -124,9 +124,7 @@ class TestTrustCheckerService(unittest.TestCase):
         report = check_opportunity_trust(opp)
         self.assertEqual(report.status, "SUSPICIOUS")
         self.assertLess(report.trust_score, 50.0)
-        self.assertTrue(
-            any("Upfront fee requirement" in sig for sig in report.negative_indicators)
-        )
+        self.assertTrue(any("Upfront fee requirement" in sig for sig in report.negative_indicators))
 
     def test_scam_detection_public_email_for_government_scheme(self):
         """Claiming to be a government scheme while using @gmail.com must be flagged SUSPICIOUS."""
@@ -142,9 +140,7 @@ class TestTrustCheckerService(unittest.TestCase):
         report = check_opportunity_trust(opp)
         self.assertEqual(report.status, "SUSPICIOUS")
         self.assertLess(report.trust_score, 50.0)
-        self.assertTrue(
-            any("public free webmail" in sig for sig in report.negative_indicators)
-        )
+        self.assertTrue(any("public free webmail" in sig for sig in report.negative_indicators))
 
     def test_scam_detection_credential_phishing(self):
         """Demanding banking passwords, ATM PINs, or OTPs must immediately result in SUSPICIOUS status."""
@@ -160,7 +156,9 @@ class TestTrustCheckerService(unittest.TestCase):
         self.assertEqual(report.status, "SUSPICIOUS")
         self.assertLess(report.trust_score, 30.0)
         self.assertTrue(
-            any("Demands sensitive banking credentials" in sig for sig in report.negative_indicators)
+            any(
+                "Demands sensitive banking credentials" in sig for sig in report.negative_indicators
+            )
         )
 
     def test_no_registration_fee_not_falsely_flagged(self):

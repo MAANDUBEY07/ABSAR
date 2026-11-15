@@ -39,7 +39,11 @@ def match(profile, opportunity):
         if needed is None or needed == []:
             return
         value = profile.get(field)
-        passed = None if value is None else bool(predicate(value, needed))
+        passed = (
+            None
+            if value is None or not requirements.get("confirmed")
+            else bool(predicate(value, needed))
+        )
         checks.append({"field": field, "required": needed, "actual": value, "passed": passed})
 
     for field, key in (
@@ -58,12 +62,13 @@ def match(profile, opportunity):
     check(
         "skills", requirements.get("required_skills"), lambda v, n: normalized(n) <= normalized(v)
     )
-    status = (
-        "INELIGIBLE"
-        if any(c["passed"] is False for c in checks)
-        else "UNKNOWN"
-        if not requirements.get("confirmed") or any(c["passed"] is None for c in checks)
-        else "ELIGIBLE"
+    from app.services.eligibility_adapter import evaluate_opportunity
+
+    decision = evaluate_opportunity(
+        profile, dict(opportunity, title=opportunity.get("title") or "Opportunity")
+    )
+    status = {"ELIGIBLE": "ELIGIBLE", "NOT_ELIGIBLE": "INELIGIBLE"}.get(
+        decision["api_status"], "UNKNOWN"
     )
     analysis = compare_skills(profile.get("skills"), requirements)
     pref_checks = []
@@ -101,6 +106,7 @@ def match(profile, opportunity):
     return dict(
         opportunity_id=opportunity["id"],
         eligibility=status,
+        eligibility_detail=decision,
         checks=checks,
         factors=factors,
         weights=settings.match_weights,

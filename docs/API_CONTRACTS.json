@@ -1,6 +1,6 @@
 {
-  "title": "AVSAR Stage 1 observed backend contracts",
-  "version": "stage1",
+  "title": "AVSAR Phase 2 observed backend contracts",
+  "version": "phase2",
   "definitions": {
     "Answer": {
       "additionalProperties": false,
@@ -1040,6 +1040,83 @@
           "title": "Branches",
           "type": "array"
         },
+        "min_age": {
+          "anyOf": [
+            {
+              "maximum": 120,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Age"
+        },
+        "max_age": {
+          "anyOf": [
+            {
+              "maximum": 120,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Age"
+        },
+        "max_annual_income": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Annual Income"
+        },
+        "genders": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Genders",
+          "type": "array"
+        },
+        "social_categories": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 50,
+          "title": "Social Categories",
+          "type": "array"
+        },
+        "domicile_states": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Domicile States",
+          "type": "array"
+        },
+        "required_disability_status": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Required Disability Status"
+        },
         "min_cgpa": {
           "anyOf": [
             {
@@ -1759,6 +1836,86 @@
           "title": "Evidence",
           "type": "array"
         },
+        "parsed_skills": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parsed Skills"
+        },
+        "experience_years": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Experience Years"
+        },
+        "education": {
+          "anyOf": [
+            {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Education"
+        },
+        "readiness_score": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Readiness Score"
+        },
+        "recommendations": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recommendations"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        },
         "disclaimer": {
           "title": "Disclaimer",
           "type": "string"
@@ -1832,6 +1989,19 @@
           },
           "title": "Evidence",
           "type": "array"
+        },
+        "source_assessment": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Assessment"
         },
         "disclaimer": {
           "title": "Disclaimer",
@@ -2154,6 +2324,86 @@
           "title": "Evidence",
           "type": "array"
         },
+        "parsed_skills": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parsed Skills"
+        },
+        "experience_years": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Experience Years"
+        },
+        "education": {
+          "anyOf": [
+            {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Education"
+        },
+        "readiness_score": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Readiness Score"
+        },
+        "recommendations": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recommendations"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        },
         "disclaimer": {
           "title": "Disclaimer",
           "type": "string"
@@ -2202,6 +2452,19 @@
           "title": "Evidence",
           "type": "array"
         },
+        "source_assessment": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Assessment"
+        },
         "disclaimer": {
           "title": "Disclaimer",
           "type": "string"
@@ -2233,7 +2496,7 @@
       "errors": "503 when not ready",
       "frontend_consumer": "Health monitoring",
       "scope": "Operational",
-      "coverage": "Stage 1 isolated migrated startup smoke"
+      "coverage": "Phase 2 isolated migrated startup smoke"
     },
     {
       "method": "GET",
@@ -3214,7 +3477,7 @@
       ],
       "handler": "app/routes/discovery.py:21 (feed)",
       "storage": "SQL Job/Outbox; raw_listings/opportunities",
-      "status": "Configured public RSS only; fuzzy ingestion policy pending",
+      "status": "Configured RSS and operator-enabled source adapters; duplicate reviews never auto-merge",
       "success": "Envelope data from handler; inspect source reference",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -3238,7 +3501,47 @@
       "parameters": [],
       "handler": "app/routes/discovery.py:10 (discovery)",
       "storage": "SQL Job/Outbox; raw_listings/opportunities",
-      "status": "Configured public RSS only; fuzzy ingestion policy pending",
+      "status": "Configured RSS and operator-enabled source adapters; duplicate reviews never auto-merge",
+      "success": "Envelope data from handler; inspect source reference",
+      "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
+      "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
+      "scope": "Development-only compatibility; unavailable in hosted mode",
+      "coverage": "Local API/adapter suite; see test_persistent.py, test_member2_journey.py, test_stage1.py; per-operation live coverage not claimed"
+    },
+    {
+      "method": "GET",
+      "route": "/api/discovery/sources",
+      "authentication": "Bearer; owner-scoped private resources",
+      "request_body": null,
+      "parameters": [],
+      "handler": "app/routes/discovery.py:28 (sources)",
+      "storage": "SQL Job/Outbox; raw_listings/opportunities",
+      "status": "Configured RSS and operator-enabled source adapters; duplicate reviews never auto-merge",
+      "success": "Envelope data from handler; inspect source reference",
+      "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
+      "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
+      "scope": "Development-only compatibility; unavailable in hosted mode",
+      "coverage": "Local API/adapter suite; see test_persistent.py, test_member2_journey.py, test_stage1.py; per-operation live coverage not claimed"
+    },
+    {
+      "method": "POST",
+      "route": "/api/discovery/sources/{source_id}/jobs",
+      "authentication": "Bearer; owner-scoped private resources",
+      "request_body": null,
+      "parameters": [
+        {
+          "name": "source_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "title": "Source Id"
+          }
+        }
+      ],
+      "handler": "app/routes/discovery.py:43 (source_job)",
+      "storage": "SQL Job/Outbox; raw_listings/opportunities",
+      "status": "Configured RSS and operator-enabled source adapters; duplicate reviews never auto-merge",
       "success": "Envelope data from handler; inspect source reference",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -3396,7 +3699,7 @@
       "errors": "503 when not ready",
       "frontend_consumer": "Health monitoring",
       "scope": "Operational",
-      "coverage": "Stage 1 isolated migrated startup smoke"
+      "coverage": "Phase 2 isolated migrated startup smoke"
     },
     {
       "method": "GET",
@@ -3843,6 +4146,104 @@
       "storage": "SQL/local compatibility; see handler",
       "status": "Compatibility; recovery/MFA and prepare/answer may return 503",
       "success": "Legacy direct payload or explicit 503; not canonical frontend contracts",
+      "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
+      "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
+      "scope": "Development-only compatibility; unavailable in hosted mode",
+      "coverage": "Local API/adapter suite; see test_persistent.py, test_member2_journey.py, test_stage1.py; per-operation live coverage not claimed"
+    },
+    {
+      "method": "GET",
+      "route": "/api/opportunities/{record_id}/duplicates",
+      "authentication": "Bearer; owner-scoped private resources",
+      "request_body": null,
+      "parameters": [
+        {
+          "name": "record_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "title": "Record Id"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 100,
+            "minimum": 1,
+            "default": 20,
+            "title": "Limit"
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 10000,
+            "minimum": 0,
+            "default": 0,
+            "title": "Offset"
+          }
+        }
+      ],
+      "handler": "app/routes/opportunities.py:68 (duplicate_reviews)",
+      "storage": "Mongo opportunities or SQL LocalDocument",
+      "status": "Implemented; covered by local regression suite",
+      "success": "Envelope OpportunityDocument or list + pagination meta",
+      "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
+      "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
+      "scope": "Development-only compatibility; unavailable in hosted mode",
+      "coverage": "Local API/adapter suite; see test_persistent.py, test_member2_journey.py, test_stage1.py; per-operation live coverage not claimed"
+    },
+    {
+      "method": "GET",
+      "route": "/api/opportunities/{record_id}/observations",
+      "authentication": "Bearer; owner-scoped private resources",
+      "request_body": null,
+      "parameters": [
+        {
+          "name": "record_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "title": "Record Id"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 100,
+            "minimum": 1,
+            "default": 20,
+            "title": "Limit"
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 10000,
+            "minimum": 0,
+            "default": 0,
+            "title": "Offset"
+          }
+        }
+      ],
+      "handler": "app/routes/opportunities.py:58 (observations)",
+      "storage": "Mongo opportunities or SQL LocalDocument",
+      "status": "Implemented; covered by local regression suite",
+      "success": "Envelope OpportunityDocument or list + pagination meta",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
       "scope": "Development-only compatibility; unavailable in hosted mode",
@@ -4340,7 +4741,7 @@
       ],
       "handler": "app/routes/resume.py:67 (match_resume)",
       "storage": "SQL documents/Job; skill_analysis",
-      "status": "Current lexical analyzer integrated; newer Member 1 result contract unavailable",
+      "status": "Member 1 deterministic analyzer integrated through owned result adapter",
       "success": "Envelope upload acknowledgement or skill comparison/roadmap/progress",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -4364,7 +4765,7 @@
       "parameters": [],
       "handler": "app/routes/resume.py:17 (resume)",
       "storage": "SQL documents/Job; skill_analysis",
-      "status": "Current lexical analyzer integrated; newer Member 1 result contract unavailable",
+      "status": "Member 1 deterministic analyzer integrated through owned result adapter",
       "success": "Envelope upload acknowledgement or skill comparison/roadmap/progress",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -4388,7 +4789,7 @@
       "parameters": [],
       "handler": "app/routes/resume.py:17 (resume)",
       "storage": "SQL documents/Job; skill_analysis",
-      "status": "Current lexical analyzer integrated; newer Member 1 result contract unavailable",
+      "status": "Member 1 deterministic analyzer integrated through owned result adapter",
       "success": "Envelope upload acknowledgement or skill comparison/roadmap/progress",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -4412,7 +4813,7 @@
       "parameters": [],
       "handler": "app/routes/resume.py:24 (compare)",
       "storage": "SQL documents/Job; skill_analysis",
-      "status": "Current lexical analyzer integrated; newer Member 1 result contract unavailable",
+      "status": "Member 1 deterministic analyzer integrated through owned result adapter",
       "success": "Envelope upload acknowledgement or skill comparison/roadmap/progress",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -4437,7 +4838,7 @@
       ],
       "handler": "app/routes/resume.py:35 (gaps)",
       "storage": "SQL documents/Job; skill_analysis",
-      "status": "Current lexical analyzer integrated; newer Member 1 result contract unavailable",
+      "status": "Member 1 deterministic analyzer integrated through owned result adapter",
       "success": "Envelope upload acknowledgement or skill comparison/roadmap/progress",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -4452,7 +4853,7 @@
       "parameters": [],
       "handler": "app/routes/resume.py:61 (progress)",
       "storage": "SQL documents/Job; skill_analysis",
-      "status": "Current lexical analyzer integrated; newer Member 1 result contract unavailable",
+      "status": "Member 1 deterministic analyzer integrated through owned result adapter",
       "success": "Envelope upload acknowledgement or skill comparison/roadmap/progress",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -4476,7 +4877,7 @@
       "parameters": [],
       "handler": "app/routes/resume.py:40 (roadmap)",
       "storage": "SQL documents/Job; skill_analysis",
-      "status": "Current lexical analyzer integrated; newer Member 1 result contract unavailable",
+      "status": "Member 1 deterministic analyzer integrated through owned result adapter",
       "success": "Envelope upload acknowledgement or skill comparison/roadmap/progress",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -4501,7 +4902,7 @@
       ],
       "handler": "app/routes/trust.py:67 (trust_report)",
       "storage": "verification_results/source snapshots",
-      "status": "Current risk report integrated; newer trust-score contract unavailable",
+      "status": "Member 1 source assessment and independent backend risk evidence integrated",
       "success": "Envelope TrustReport + snapshot fields; history list or allegation",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -5251,7 +5652,7 @@
       ],
       "handler": "app/routes/discovery.py:21 (feed)",
       "storage": "SQL Job/Outbox; raw_listings/opportunities",
-      "status": "Configured public RSS only; fuzzy ingestion policy pending",
+      "status": "Configured RSS and operator-enabled source adapters; duplicate reviews never auto-merge",
       "success": "Envelope data from handler; inspect source reference",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -5275,7 +5676,47 @@
       "parameters": [],
       "handler": "app/routes/discovery.py:10 (discovery)",
       "storage": "SQL Job/Outbox; raw_listings/opportunities",
-      "status": "Configured public RSS only; fuzzy ingestion policy pending",
+      "status": "Configured RSS and operator-enabled source adapters; duplicate reviews never auto-merge",
+      "success": "Envelope data from handler; inspect source reference",
+      "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
+      "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
+      "scope": "Canonical",
+      "coverage": "Local API/adapter suite; see test_persistent.py, test_member2_journey.py, test_stage1.py; per-operation live coverage not claimed"
+    },
+    {
+      "method": "GET",
+      "route": "/api/v1/discovery/sources",
+      "authentication": "Bearer; owner-scoped private resources",
+      "request_body": null,
+      "parameters": [],
+      "handler": "app/routes/discovery.py:28 (sources)",
+      "storage": "SQL Job/Outbox; raw_listings/opportunities",
+      "status": "Configured RSS and operator-enabled source adapters; duplicate reviews never auto-merge",
+      "success": "Envelope data from handler; inspect source reference",
+      "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
+      "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
+      "scope": "Canonical",
+      "coverage": "Local API/adapter suite; see test_persistent.py, test_member2_journey.py, test_stage1.py; per-operation live coverage not claimed"
+    },
+    {
+      "method": "POST",
+      "route": "/api/v1/discovery/sources/{source_id}/jobs",
+      "authentication": "Bearer; owner-scoped private resources",
+      "request_body": null,
+      "parameters": [
+        {
+          "name": "source_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "title": "Source Id"
+          }
+        }
+      ],
+      "handler": "app/routes/discovery.py:43 (source_job)",
+      "storage": "SQL Job/Outbox; raw_listings/opportunities",
+      "status": "Configured RSS and operator-enabled source adapters; duplicate reviews never auto-merge",
       "success": "Envelope data from handler; inspect source reference",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -5783,6 +6224,104 @@
     },
     {
       "method": "GET",
+      "route": "/api/v1/opportunities/{record_id}/duplicates",
+      "authentication": "Bearer; owner-scoped private resources",
+      "request_body": null,
+      "parameters": [
+        {
+          "name": "record_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "title": "Record Id"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 100,
+            "minimum": 1,
+            "default": 20,
+            "title": "Limit"
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 10000,
+            "minimum": 0,
+            "default": 0,
+            "title": "Offset"
+          }
+        }
+      ],
+      "handler": "app/routes/opportunities.py:68 (duplicate_reviews)",
+      "storage": "Mongo opportunities or SQL LocalDocument",
+      "status": "Implemented; covered by local regression suite",
+      "success": "Envelope OpportunityDocument or list + pagination meta",
+      "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
+      "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
+      "scope": "Canonical",
+      "coverage": "Local API/adapter suite; see test_persistent.py, test_member2_journey.py, test_stage1.py; per-operation live coverage not claimed"
+    },
+    {
+      "method": "GET",
+      "route": "/api/v1/opportunities/{record_id}/observations",
+      "authentication": "Bearer; owner-scoped private resources",
+      "request_body": null,
+      "parameters": [
+        {
+          "name": "record_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "title": "Record Id"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 100,
+            "minimum": 1,
+            "default": 20,
+            "title": "Limit"
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 10000,
+            "minimum": 0,
+            "default": 0,
+            "title": "Offset"
+          }
+        }
+      ],
+      "handler": "app/routes/opportunities.py:58 (observations)",
+      "storage": "Mongo opportunities or SQL LocalDocument",
+      "status": "Implemented; covered by local regression suite",
+      "success": "Envelope OpportunityDocument or list + pagination meta",
+      "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
+      "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
+      "scope": "Canonical",
+      "coverage": "Local API/adapter suite; see test_persistent.py, test_member2_journey.py, test_stage1.py; per-operation live coverage not claimed"
+    },
+    {
+      "method": "GET",
       "route": "/api/v1/profile",
       "authentication": "Bearer; owner-scoped private resources",
       "request_body": null,
@@ -6248,7 +6787,7 @@
       ],
       "handler": "app/routes/resume.py:67 (match_resume)",
       "storage": "SQL documents/Job; skill_analysis",
-      "status": "Current lexical analyzer integrated; newer Member 1 result contract unavailable",
+      "status": "Member 1 deterministic analyzer integrated through owned result adapter",
       "success": "Envelope upload acknowledgement or skill comparison/roadmap/progress",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -6272,7 +6811,7 @@
       "parameters": [],
       "handler": "app/routes/resume.py:17 (resume)",
       "storage": "SQL documents/Job; skill_analysis",
-      "status": "Current lexical analyzer integrated; newer Member 1 result contract unavailable",
+      "status": "Member 1 deterministic analyzer integrated through owned result adapter",
       "success": "Envelope upload acknowledgement or skill comparison/roadmap/progress",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -6296,7 +6835,7 @@
       "parameters": [],
       "handler": "app/routes/resume.py:17 (resume)",
       "storage": "SQL documents/Job; skill_analysis",
-      "status": "Current lexical analyzer integrated; newer Member 1 result contract unavailable",
+      "status": "Member 1 deterministic analyzer integrated through owned result adapter",
       "success": "Envelope upload acknowledgement or skill comparison/roadmap/progress",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -6320,7 +6859,7 @@
       "parameters": [],
       "handler": "app/routes/resume.py:24 (compare)",
       "storage": "SQL documents/Job; skill_analysis",
-      "status": "Current lexical analyzer integrated; newer Member 1 result contract unavailable",
+      "status": "Member 1 deterministic analyzer integrated through owned result adapter",
       "success": "Envelope upload acknowledgement or skill comparison/roadmap/progress",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -6345,7 +6884,7 @@
       ],
       "handler": "app/routes/resume.py:35 (gaps)",
       "storage": "SQL documents/Job; skill_analysis",
-      "status": "Current lexical analyzer integrated; newer Member 1 result contract unavailable",
+      "status": "Member 1 deterministic analyzer integrated through owned result adapter",
       "success": "Envelope upload acknowledgement or skill comparison/roadmap/progress",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -6360,7 +6899,7 @@
       "parameters": [],
       "handler": "app/routes/resume.py:61 (progress)",
       "storage": "SQL documents/Job; skill_analysis",
-      "status": "Current lexical analyzer integrated; newer Member 1 result contract unavailable",
+      "status": "Member 1 deterministic analyzer integrated through owned result adapter",
       "success": "Envelope upload acknowledgement or skill comparison/roadmap/progress",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -6384,7 +6923,7 @@
       "parameters": [],
       "handler": "app/routes/resume.py:40 (roadmap)",
       "storage": "SQL documents/Job; skill_analysis",
-      "status": "Current lexical analyzer integrated; newer Member 1 result contract unavailable",
+      "status": "Member 1 deterministic analyzer integrated through owned result adapter",
       "success": "Envelope upload acknowledgement or skill comparison/roadmap/progress",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -6409,7 +6948,7 @@
       ],
       "handler": "app/routes/trust.py:67 (trust_report)",
       "storage": "verification_results/source snapshots",
-      "status": "Current risk report integrated; newer trust-score contract unavailable",
+      "status": "Member 1 source assessment and independent backend risk evidence integrated",
       "success": "Envelope TrustReport + snapshot fields; history list or allegation",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -6433,7 +6972,7 @@
       "parameters": [],
       "handler": "app/routes/trust.py:15 (risk)",
       "storage": "verification_results/source snapshots",
-      "status": "Current risk report integrated; newer trust-score contract unavailable",
+      "status": "Member 1 source assessment and independent backend risk evidence integrated",
       "success": "Envelope TrustReport + snapshot fields; history list or allegation",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -6457,7 +6996,7 @@
       "parameters": [],
       "handler": "app/routes/trust.py:49 (report)",
       "storage": "verification_results/source snapshots",
-      "status": "Current risk report integrated; newer trust-score contract unavailable",
+      "status": "Member 1 source assessment and independent backend risk evidence integrated",
       "success": "Envelope TrustReport + snapshot fields; history list or allegation",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -6482,7 +7021,7 @@
       ],
       "handler": "app/routes/trust.py:41 (verification)",
       "storage": "verification_results/source snapshots",
-      "status": "Current risk report integrated; newer trust-score contract unavailable",
+      "status": "Member 1 source assessment and independent backend risk evidence integrated",
       "success": "Envelope TrustReport + snapshot fields; history list or allegation",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -6507,7 +7046,7 @@
       ],
       "handler": "app/routes/trust.py:35 (history)",
       "storage": "verification_results/source snapshots",
-      "status": "Current risk report integrated; newer trust-score contract unavailable",
+      "status": "Member 1 source assessment and independent backend risk evidence integrated",
       "success": "Envelope TrustReport + snapshot fields; history list or allegation",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -6531,7 +7070,7 @@
       "parameters": [],
       "handler": "app/routes/trust.py:15 (risk)",
       "storage": "verification_results/source snapshots",
-      "status": "Current risk report integrated; newer trust-score contract unavailable",
+      "status": "Member 1 source assessment and independent backend risk evidence integrated",
       "success": "Envelope TrustReport + snapshot fields; history list or allegation",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -6555,7 +7094,7 @@
       "parameters": [],
       "handler": "app/routes/trust.py:49 (report)",
       "storage": "verification_results/source snapshots",
-      "status": "Current risk report integrated; newer trust-score contract unavailable",
+      "status": "Member 1 source assessment and independent backend risk evidence integrated",
       "success": "Envelope TrustReport + snapshot fields; history list or allegation",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -6580,7 +7119,7 @@
       ],
       "handler": "app/routes/trust.py:41 (verification)",
       "storage": "verification_results/source snapshots",
-      "status": "Current risk report integrated; newer trust-score contract unavailable",
+      "status": "Member 1 source assessment and independent backend risk evidence integrated",
       "success": "Envelope TrustReport + snapshot fields; history list or allegation",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -6605,7 +7144,7 @@
       ],
       "handler": "app/routes/trust.py:35 (history)",
       "storage": "verification_results/source snapshots",
-      "status": "Current risk report integrated; newer trust-score contract unavailable",
+      "status": "Member 1 source assessment and independent backend risk evidence integrated",
       "success": "Envelope TrustReport + snapshot fields; history list or allegation",
       "errors": "401 authentication; 404 owned resource; 409 state/conflict; 422 validation; 503 dependency (as applicable)",
       "frontend_consumer": "Not verified against Member 3 completed branch; API client base /api/v1 exists locally",
@@ -6625,7 +7164,7 @@
       "errors": "503 when not ready",
       "frontend_consumer": "Health monitoring",
       "scope": "Operational",
-      "coverage": "Stage 1 isolated migrated startup smoke"
+      "coverage": "Phase 2 isolated migrated startup smoke"
     },
     {
       "method": "GET",
@@ -6640,7 +7179,7 @@
       "errors": "503 when not ready",
       "frontend_consumer": "Health monitoring",
       "scope": "Operational",
-      "coverage": "Stage 1 isolated migrated startup smoke"
+      "coverage": "Phase 2 isolated migrated startup smoke"
     }
   ],
   "success_envelope": {

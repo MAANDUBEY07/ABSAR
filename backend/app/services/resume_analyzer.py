@@ -7,13 +7,14 @@ Conforms strictly to the AVSAR ResumeAnalysisResponse API contract.
 """
 
 from __future__ import annotations
+from app.integrations.resume_claims import claims as claims
 
 from dataclasses import dataclass, field
 from datetime import datetime
 from io import BytesIO
 import logging
 import re
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
 import pymupdf
 
@@ -42,7 +43,6 @@ SKILL_TAXONOMY: Dict[str, List[str]] = {
     "php": ["php"],
     "ruby": ["ruby", "ruby on rails"],
     "r": ["r programming", "r language"],
-
     # Frameworks & Libraries
     "react": ["react", "react.js", "reactjs", "react native"],
     "node.js": ["node", "node.js", "nodejs"],
@@ -54,7 +54,6 @@ SKILL_TAXONOMY: Dict[str, List[str]] = {
     "spring boot": ["spring boot", "springboot", "spring framework"],
     "angular": ["angular", "angularjs"],
     "vue.js": ["vue", "vue.js", "vuejs"],
-
     # AI & Data Science
     "machine learning": ["machine learning", "ml", "pattern recognition"],
     "deep learning": ["deep learning", "dl", "neural networks"],
@@ -66,7 +65,6 @@ SKILL_TAXONOMY: Dict[str, List[str]] = {
     "nlp": ["nlp", "natural language processing", "spacy", "nltk", "transformers"],
     "computer vision": ["computer vision", "opencv"],
     "generative ai": ["generative ai", "genai", "llm", "large language models"],
-
     # Cloud & DevOps
     "docker": ["docker", "containerization"],
     "kubernetes": ["kubernetes", "k8s"],
@@ -76,13 +74,11 @@ SKILL_TAXONOMY: Dict[str, List[str]] = {
     "git": ["git", "github", "gitlab", "version control"],
     "ci/cd": ["ci/cd", "continuous integration", "github actions", "jenkins"],
     "linux": ["linux", "ubuntu", "bash", "shell scripting"],
-
     # Databases & Storage
     "mongodb": ["mongodb", "mongo"],
     "redis": ["redis"],
     "postgresql": ["postgresql", "postgres"],
     "elasticsearch": ["elasticsearch"],
-
     # Core CS & Soft Skills
     "data structures": ["data structures", "dsa", "algorithms"],
     "system design": ["system design", "distributed systems", "microservices"],
@@ -97,6 +93,7 @@ SKILL_TAXONOMY: Dict[str, List[str]] = {
 # ---------------------------------------------------------------------------
 # Data Models
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ResumeAnalysisResult:
@@ -124,6 +121,7 @@ class ResumeAnalysisResult:
 # ---------------------------------------------------------------------------
 # Extraction Functions
 # ---------------------------------------------------------------------------
+
 
 def extract_text_from_pdf_bytes(pdf_bytes: bytes) -> str:
     """Extracts raw text from PDF document bytes using PyMuPDF."""
@@ -157,7 +155,7 @@ def extract_skills(text: str) -> List[str]:
             if match:
                 # Check for negative context before the match (e.g. "no knowledge of Docker")
                 start_idx = max(0, match.start() - 35)
-                prefix = normalized_text[start_idx:match.start()]
+                prefix = normalized_text[start_idx : match.start()]
                 if re.search(r"\b(?:no|not|lack(?:ing)?|never|unfamiliar\s+with)\b", prefix):
                     continue
 
@@ -176,7 +174,10 @@ def extract_education(text: str) -> List[Dict[str, Any]]:
 
     # Degree patterns
     degree_patterns = [
-        (r"\b(B\.?Tech|B\.?E\.?|Bachelor\s+of\s+Technology|Bachelor\s+of\s+Engineering)\b", "B.Tech"),
+        (
+            r"\b(B\.?Tech|B\.?E\.?|Bachelor\s+of\s+Technology|Bachelor\s+of\s+Engineering)\b",
+            "B.Tech",
+        ),
         (r"\b(M\.?Tech|M\.?E\.?|Master\s+of\s+Technology|Master\s+of\s+Engineering)\b", "M.Tech"),
         (r"\b(B\.?C\.?A\.?|Bachelor\s+of\s+Computer\s+Applications)\b", "BCA"),
         (r"\b(M\.?C\.?A\.?|Master\s+of\s+Computer\s+Applications)\b", "MCA"),
@@ -213,19 +214,23 @@ def extract_education(text: str) -> List[Dict[str, Any]]:
 
     if found_degrees:
         for deg in found_degrees:
-            education_records.append({
-                "degree": deg,
+            education_records.append(
+                {
+                    "degree": deg,
+                    "field": branch,
+                    "institution": institution,
+                    "graduation_year": grad_year,
+                }
+            )
+    elif institution or grad_year:
+        education_records.append(
+            {
+                "degree": "Higher Education",
                 "field": branch,
                 "institution": institution,
                 "graduation_year": grad_year,
-            })
-    elif institution or grad_year:
-        education_records.append({
-            "degree": "Higher Education",
-            "field": branch,
-            "institution": institution,
-            "graduation_year": grad_year,
-        })
+            }
+        )
 
     return education_records
 
@@ -253,7 +258,7 @@ def estimate_experience_years(text: str) -> float:
     # 2. Date ranges like "Jan 2022 - Mar 2024" or "2021 - Present"
     current_year = datetime.now().year
     month_names = "Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec"
-    range_regex = rf"\b(?:{month_names})[a-z]*\s+(\d{{4}})\s*[-–to]+\s*(?:(?:{month_names})[a-z]*\s+)?(\d{{4}}|Present|Current)\b"
+    range_regex = rf"\b(?:{month_names})[a-z]*\s+(\d{{4}})\s*[-â€“to]+\s*(?:(?:{month_names})[a-z]*\s+)?(\d{{4}}|Present|Current)\b"
 
     total_months = 0
     matches = re.findall(range_regex, text, re.I)
@@ -262,7 +267,9 @@ def estimate_experience_years(text: str) -> float:
         start_year = int(start_year_str)
         if start_year < 1980 or start_year > current_year:
             continue
-        end_year = current_year if end_year_str.lower() in {"present", "current"} else int(end_year_str)
+        end_year = (
+            current_year if end_year_str.lower() in {"present", "current"} else int(end_year_str)
+        )
         if end_year >= start_year:
             # Estimate roughly 12 months per calendar year spanned
             diff_years = max(end_year - start_year, 0.5)
@@ -273,7 +280,7 @@ def estimate_experience_years(text: str) -> float:
         return min(round(years, 1), 35.0)
 
     # 3. Simple standalone year ranges "2022 - 2024" in experience sections
-    simple_years = re.findall(r"\b(20[1-2]\d)\s*[-–]\s*(20[1-2]\d|Present|Current)\b", text, re.I)
+    simple_years = re.findall(r"\b(20[1-2]\d)\s*[-â€“]\s*(20[1-2]\d|Present|Current)\b", text, re.I)
     if simple_years:
         spans = []
         for sy, ey in simple_years:
@@ -290,6 +297,7 @@ def estimate_experience_years(text: str) -> float:
 # ---------------------------------------------------------------------------
 # High-Level Service Class
 # ---------------------------------------------------------------------------
+
 
 class ResumeAnalyzer:
     """Service analyzing candidate resumes, extracting credentials, and evaluating readiness."""
@@ -309,17 +317,23 @@ class ResumeAnalyzer:
         elif len(skills) >= 2:
             score += 15.0
         else:
-            recommendations.append("Add key technical and soft skills to improve resume visibility.")
+            recommendations.append(
+                "Add key technical and soft skills to improve resume visibility."
+            )
 
         if education:
             score += 20.0
         else:
-            recommendations.append("Include your highest degree, institution name, and graduation year.")
+            recommendations.append(
+                "Include your highest degree, institution name, and graduation year."
+            )
 
         if exp_years > 0:
             score += 15.0
         else:
-            recommendations.append("Highlight academic projects, hackathons, or internships to demonstrate practical experience.")
+            recommendations.append(
+                "Highlight academic projects, hackathons, or internships to demonstrate practical experience."
+            )
 
         readiness_score = min(max(score, 10.0), 100.0)
 
@@ -397,7 +411,9 @@ class ResumeAnalyzer:
 
         category = str(opportunity.get("category", "")).lower()
         if category in {"job", "internship"} and base_result.experience_years == 0.0:
-            recs.append("Highlight open-source contributions or technical coursework to compensate for limited work experience.")
+            recs.append(
+                "Highlight open-source contributions or technical coursework to compensate for limited work experience."
+            )
 
         if not recs:
             recs.append("Profile is well-aligned with this opportunity.")
@@ -427,59 +443,3 @@ def analyze_resume(
     if isinstance(resume_input, bytes):
         return _analyzer_instance.analyze_pdf(resume_input)
     return _analyzer_instance.analyze_text(resume_input)
-
-
-"""Extract lexical resume claims with quotes and character offsets, without profile mutation."""
-
-import re
-
-SKILLS = (
-    "python",
-    "javascript",
-    "typescript",
-    "java",
-    "sql",
-    "react",
-    "docker",
-    "git",
-    "aws",
-    "excel",
-    "machine learning",
-    "communication",
-    "leadership",
-    "c++",
-    "fastapi",
-    "postgresql",
-)
-
-
-def claims(text):
-    found = []
-    for skill in SKILLS:
-        for match in re.finditer(r"(?<!\w)" + re.escape(skill) + r"(?!\w)", text, re.I):
-            prefix = text[max(0, match.start() - 45) : match.start()]
-            if re.search(r"(?:no|not|without|lack(?:ing)?|never)\s+(?:\w+\s+){0,3}$", prefix, re.I):
-                continue
-            found.append(
-                dict(
-                    skill=skill,
-                    quote=match.group(),
-                    start=match.start(),
-                    end=match.end(),
-                    source="RESUME_CLAIM",
-                )
-            )
-    return found
-
-
-def analyze_resume_claims(text, owner_id, document_id):
-    from app.models.resume import ResumeAnalysis
-
-    evidence = claims(text)
-    return ResumeAnalysis(
-        owner_id=owner_id,
-        document_id=document_id,
-        skills=sorted({claim["skill"] for claim in evidence}),
-        evidence=evidence,
-        disclaimer="Resume claims; confirm explicitly through profile updates",
-    ).model_dump(mode="json")

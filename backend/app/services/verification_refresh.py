@@ -9,7 +9,7 @@ from app.integrations import member1
 
 def refresh():
     seen = set()
-    for previous in documents.scan("verification_results", limit=100):
+    for previous in documents.iterate("verification_results", batch_size=100):
         if (
             not previous.get("opportunity_id")
             or not previous.get("owner_id")

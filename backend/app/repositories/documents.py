@@ -8,6 +8,8 @@ from app.models.runtime import LocalDocument
 
 COLLECTIONS = (
     "opportunities",
+    "opportunity_observations",
+    "duplicate_reviews",
     "raw_listings",
     "verification_results",
     "extracted_notices",
@@ -149,3 +151,68 @@ def scan(collection, limit=501, owner=None):
 
         return [opportunity_view(row) for row in rows]
     return rows
+
+
+def iterate(collection, batch_size=100):
+    """Stable bounded-memory sweep across initial records, not the first batch forever."""
+    if client:
+        cursor = (
+            client[settings.mongodb_database][collection]
+            .find({}, {"_id": 0})
+            .sort("_id", 1)
+            .batch_size(batch_size)
+        )
+        yield from cursor
+        return
+    with Session() as db:
+        maximum = db.scalar(
+            select(LocalDocument.id)
+            .where(LocalDocument.collection == collection)
+            .order_by(LocalDocument.id.desc())
+            .limit(1)
+        )
+    after = ""
+    while maximum:
+        with Session() as db:
+            page = list(
+                db.scalars(
+                    select(LocalDocument)
+                    .where(
+                        LocalDocument.collection == collection,
+                        LocalDocument.id > after,
+                        LocalDocument.id <= maximum,
+                    )
+                    .order_by(LocalDocument.id)
+                    .limit(batch_size)
+                )
+            )
+            records = [row.payload for row in page]
+            if not page:
+                break
+            after = page[-1].id
+        yield from records
+
+
+def related(collection, field, value, limit=100, offset=0):
+    if client:
+        return list(
+            client[settings.mongodb_database][collection]
+            .find({field: value}, {"_id": 0})
+            .sort("_id", 1)
+            .skip(offset)
+            .limit(limit)
+        )
+    with Session() as db:
+        return [
+            row.payload
+            for row in db.scalars(
+                select(LocalDocument)
+                .where(
+                    LocalDocument.collection == collection,
+                    LocalDocument.payload[field].as_string() == value,
+                )
+                .order_by(LocalDocument.id)
+                .offset(offset)
+                .limit(limit)
+            )
+        ]

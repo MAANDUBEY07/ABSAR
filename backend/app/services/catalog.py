@@ -38,6 +38,42 @@ def create_opportunity(data):
             else "UNKNOWN",
         )
     )
+    # Append every distinct source observation; conflicts never overwrite earlier facts.
+    observation_id = digest([record_id, data])[:32]
+    from app.models.base import now
+
+    prior = documents.get("opportunities", record_id)
+    conflicts = {
+        key: {"existing": prior.get(key), "observed": value}
+        for key, value in data.items()
+        if prior and prior.get(key) != value
+    }
+    documents.put(
+        "opportunity_observations",
+        observation_id,
+        dict(
+            opportunity_id=record_id, observed_at=now().isoformat(), data=data, conflicts=conflicts
+        ),
+        insert_only=True,
+    )
+    from app.integrations.member1 import compare_opportunities
+
+    candidates = documents.scan("opportunities", limit=501)
+    for existing in candidates[:500]:
+        decision = compare_opportunities(data, existing).to_dict()
+        if decision["is_duplicate"] or decision["requires_review"]:
+            documents.put(
+                "duplicate_reviews",
+                digest([record_id, existing["id"]])[:32],
+                dict(
+                    candidate_id=record_id,
+                    existing_id=existing["id"],
+                    decision=decision,
+                    action="HUMAN_REVIEW_REQUIRED",
+                    candidate_scan_truncated=len(candidates) > 500,
+                ),
+                insert_only=True,
+            )
     return documents.put(
         "opportunities", record_id, document.model_dump(mode="json"), insert_only=True
     )

@@ -67,4 +67,6 @@ def report(body: Report, owner: Owner):
 def trust_report(opportunity_id: str, owner: Owner):
     rows = history(opportunity_id, owner)["data"]
     analyses = [r for r in rows if "risk_score" in r]
-    return ok(analyses[0]) if analyses else risk(MatchInput(opportunity_id=opportunity_id), owner)
+    if not analyses:
+        raise HTTPException(404, "Trust analysis unavailable; POST /verification/analyze first")
+    return ok(analyses[0])

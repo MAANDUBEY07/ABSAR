@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     otel_enabled: bool = False
     log_level: str = "INFO"
     discovery_feeds: list[str] = Field(default_factory=list)
+    discovery_sources: list[str] = Field(default_factory=list)
 
     @property
     def hosted(self):

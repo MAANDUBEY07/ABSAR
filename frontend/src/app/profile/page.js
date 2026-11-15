@@ -40,7 +40,7 @@ export default function ProfilePage() {
   function updatePreference(key, value) { setForm((current) => ({ ...current, preferences: { ...current.preferences, [key]: value } })); }
   async function submit(event) {
     event.preventDefault(); setSaving(true); setError(""); setNotice("");
-    const remote = form.preferences.remote === "true" ? true : form.preferences.remote === "false" ? false : null;
+    const remote = String(form.preferences.remote) === "true" ? true : String(form.preferences.remote) === "false" ? false : null;
     const payload = {
       name: form.name.trim() || null,
       date_of_birth: form.date_of_birth || null,
@@ -51,7 +51,11 @@ export default function ProfilePage() {
       location: form.location.trim() || null,
       experience_months: numberOrNull(form.experience_months),
       experience: Array.isArray(form.experience) ? form.experience : [],
-      education: Array.isArray(form.education) ? form.education : [],
+      education: form.education ?? [],
+      gender: form.gender || null, category: form.category || null, domicile_state: form.domicile_state || null,
+      domicile_district: form.domicile_district || null, annual_income: numberOrNull(form.annual_income),
+      differently_abled: form.differently_abled ?? null, disability_percentage: numberOrNull(form.disability_percentage),
+      phone: form.phone || null,
       skills: form.skills.split(",").map((skill) => skill.trim()).filter(Boolean),
       preferences: {
         remote,
@@ -83,6 +87,13 @@ export default function ProfilePage() {
           <label><span className="field-label">Experience (months)</span><input className="form-control" type="number" min="0" max="1200" value={form.experience_months} onChange={(event) => update("experience_months", event.target.value)} /></label>
           <label className="full-span"><span className="field-label">Skills (comma separated)</span><textarea className="form-control" rows="3" value={form.skills} onChange={(event) => update("skills", event.target.value)} placeholder="e.g. Python, research, communication" /></label>
         </div>
+        <details className="detail-section"><summary>Optional eligibility information</summary><p>Provide these facts only when an opportunity you choose requires them. Missing information stays unknown.</p><div className="form-grid">
+          <label><span className="field-label">Gender (as required by the source)</span><input className="form-control" value={form.gender || ""} onChange={(event) => update("gender", event.target.value)} /></label>
+          <label><span className="field-label">Social category</span><input className="form-control" value={form.category || ""} onChange={(event) => update("category", event.target.value)} /></label>
+          <label><span className="field-label">Domicile state</span><input className="form-control" value={form.domicile_state || ""} onChange={(event) => update("domicile_state", event.target.value)} /></label>
+          <label><span className="field-label">Annual income (same units as the source rule)</span><input type="number" min="0" className="form-control" value={form.annual_income ?? ""} onChange={(event) => update("annual_income", event.target.value)} /></label>
+          <label><span className="field-label">Disability status, if required</span><select className="form-control" value={form.differently_abled == null ? "" : String(form.differently_abled)} onChange={(event) => update("differently_abled", event.target.value === "" ? null : event.target.value === "true")}><option value="">Not provided</option><option value="true">Yes</option><option value="false">No</option></select></label>
+        </div></details>
         <div className="detail-section"><h2>Opportunity preferences</h2><div className="form-grid">
           <label><span className="field-label">Preferred mode</span><select className="form-control" value={form.preferences.remote == null ? "" : String(form.preferences.remote)} onChange={(event) => updatePreference("remote", event.target.value)}><option value="">Any mode</option><option value="true">Online</option><option value="false">On-site</option></select></label>
           <label><span className="field-label">Domain</span><input className="form-control" value={form.preferences.domain || ""} onChange={(event) => updatePreference("domain", event.target.value)} maxLength={200} /></label>

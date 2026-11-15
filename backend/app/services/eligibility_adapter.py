@@ -19,6 +19,9 @@ def evaluate_opportunity(profile, opportunity):
             ("degree", "degrees"),
             ("branch", "branches"),
             ("location", "locations"),
+            ("gender", "genders"),
+            ("category", "social_categories"),
+            ("domicile_state", "domicile_states"),
         ):
             expected = requirements.get(source)
             if expected:
@@ -31,6 +34,16 @@ def evaluate_opportunity(profile, opportunity):
                 criteria.append(
                     Criterion(field=field, operator=Operator.GREATER_THAN_OR_EQUAL, value=expected)
                 )
+        for field, source, operator in (
+            ("age", "min_age", Operator.GREATER_THAN_OR_EQUAL),
+            ("age", "max_age", Operator.LESS_THAN_OR_EQUAL),
+            ("annual_income", "max_annual_income", Operator.LESS_THAN_OR_EQUAL),
+            ("differently_abled", "required_disability_status", Operator.EQUALS),
+        ):
+            if requirements.get(source) is not None:
+                criteria.append(
+                    Criterion(field=field, operator=operator, value=requirements[source])
+                )
         if requirements.get("required_skills"):
             criteria.append(
                 Criterion(
@@ -40,7 +53,15 @@ def evaluate_opportunity(profile, opportunity):
                 )
             )
     candidate = eligibility_profile(profile)
-    for field in ("graduation_year", "degree", "branch", "location"):
+    for field in (
+        "graduation_year",
+        "degree",
+        "branch",
+        "location",
+        "gender",
+        "category",
+        "domicile_state",
+    ):
         if candidate.get(field) is not None:
             candidate[field] = str(candidate[field]).casefold()
     if candidate.get("skills") is not None:
@@ -48,4 +69,15 @@ def evaluate_opportunity(profile, opportunity):
     result = EligibilityEngine().evaluate(
         candidate, Scheme(id=opportunity["id"], title=opportunity["title"], criteria=criteria)
     )
-    return EligibilityEvaluationResponse.model_validate(result.to_dict()).model_dump(mode="json")
+    payload = result.to_dict()
+    if requirements.get("confirmed") and not criteria:
+        payload.update(
+            status="ELIGIBLE",
+            api_status="ELIGIBLE",
+            is_eligible=True,
+            score=100.0,
+            summary="Reviewer confirmed no eligibility restrictions",
+            reasons=[],
+            has_missing_opportunity_criteria=False,
+        )
+    return EligibilityEvaluationResponse.model_validate(payload).model_dump(mode="json")
