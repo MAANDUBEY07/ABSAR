@@ -230,6 +230,70 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .tracker-row .full-span { width: 100%; }
 .bookmark-button:disabled { cursor: default; }
 
+/* Narrow laptop layouts retain readable opportunity cards before collapsing. */
+@media (max-width: 1120px) and (min-width: 821px) {
+  .opportunity-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .workspace-header { gap: 12px; }
+  .workspace-search { width: min(420px, 45%); }
+  .workspace-actions { gap: 11px; }
+  .page-content { padding-inline: clamp(20px, 2.5vw, 32px); }
+}
+
+/* Larger touch targets, legible field text and non-clipping cards on phones. */
+@media (max-width: 560px) {
+  .workspace-header { min-height: 64px; gap: 8px; padding: 10px 12px; }
+  .workspace-menu-button { width: 42px; height: 42px; }
+  .workspace-search { min-width: 0; min-height: 42px; padding-inline: 9px; }
+  .workspace-search input { font-size: 12px; }
+  .workspace-actions { gap: 4px; }
+  .workspace-actions .theme-toggle { width: 38px; height: 38px; }
+  .header-notice { width: 38px; height: 38px; }
+  .navbar-signout { min-width: 38px; min-height: 38px; }
+  .page-content { padding: 22px 14px 34px; }
+  .page-heading { width: 100%; }
+  .page-heading > div { min-width: 0; }
+  .page-heading p { font-size: 12px; line-height: 1.5; }
+  .eyebrow { font-size: 10px; }
+  .filter-toolbar { gap: 9px; }
+  .filter-toolbar .searchbar,
+  .filter-toolbar .filter-select,
+  .filter-toolbar .filter-location,
+  .form-control,
+  .status-select { min-height: 44px; font-size: 14px; }
+  .form-grid { gap: 14px; }
+  .field-label { font-size: 12px; }
+  .button { min-height: 44px; font-size: 12px; }
+  .opportunity-card { padding: 15px; }
+  .opportunity-title { font-size: 17px; overflow-wrap: anywhere; }
+  .organization-name { font-size: 12px; }
+  .opportunity-meta span { min-width: 0; font-size: 11px; overflow-wrap: anywhere; }
+  .category-label { font-size: 10px; }
+  .card-footer { align-items: flex-start; flex-wrap: wrap; }
+  .deadline-label, .card-footer .text-link { font-size: 11px; }
+  .bookmark-button { width: 42px; height: 42px; }
+  .detail-main, .apply-card, .panel { min-width: 0; }
+  .detail-heading h1 { font-size: clamp(25px, 8vw, 34px); overflow-wrap: anywhere; }
+  .detail-facts { gap: 10px; }
+  .detail-facts span { min-width: 0; font-size: 12px; overflow-wrap: anywhere; }
+  .source-details { align-items: flex-start; flex-wrap: wrap; }
+  .external-link { width: 100%; }
+  .trust-report { overflow-wrap: anywhere; }
+  .drop-zone { min-height: 160px; padding: 20px 14px; }
+  .drop-zone strong { max-width: 100%; overflow-wrap: anywhere; }
+  .resume-upload-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .resume-upload-actions .button { flex: 1 1 auto; }
+  .form-actions { gap: 12px; }
+  .form-actions .form-feedback { font-size: 11px; }
+  .footer { line-height: 1.6; }
+}
+
+.drop-zone-active { border-color: var(--green); background: var(--surface-mint); box-shadow: 0 0 0 3px rgba(35, 135, 84, .12); }
+.resume-upload-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.resume-upload-actions .upload-submit { margin-left: 0; }
+.sidebar[role="dialog"] { overscroll-behavior: contain; }
+.side-link:focus-visible, .button:focus-visible, .bookmark-button:focus-visible,
+.header-notice:focus-visible, .theme-toggle:focus-visible { outline: 3px solid var(--green); outline-offset: 3px; }
+
 @media (max-width: 820px) {
   .dashboard-columns { grid-template-columns: 1fr; }
   .navbar-signout { padding-inline: 8px; font-size: 9px; }
@@ -244,4 +308,10 @@ button:disabled { opacity: .55; cursor: not-allowed; }
   .calendar-filters { align-items: stretch; flex-direction: column; }
   .resume-compare { align-items: stretch; flex-direction: column; }
   .filter-select .filter-location { min-height: 42px; }
+}
+
+.dashboard-heading-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
+@media (max-width: 560px) {
+  .dashboard-heading-actions { width: 100%; }
+  .dashboard-heading-actions .button { flex: 1 1 auto; justify-content: center; }
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { UserRound, Save } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { AlertCircle, RefreshCw, UserRound, Save } from "lucide-react";
 import ProtectedWorkspace from "@/components/ProtectedWorkspace";
 import Loading from "@/components/Loading";
 import { api } from "@/services/api";
@@ -30,12 +30,23 @@ function numberOrNull(value) { return value === "" || value == null ? null : Num
 export default function ProfilePage() {
   const [form, setForm] = useState(EMPTY_PROFILE);
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  useEffect(() => {
-    api.profile().then((profile) => setForm(toForm(profile))).catch((requestError) => setError(requestError.message)).finally(() => setLoading(false));
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      setForm(toForm(await api.profile()));
+      setLoaded(true);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+  useEffect(() => { load(); }, [load]);
   function update(key, value) { setForm((current) => ({ ...current, [key]: value })); }
   function updatePreference(key, value) { setForm((current) => ({ ...current, preferences: { ...current.preferences, [key]: value } })); }
   async function submit(event) {
@@ -67,10 +78,10 @@ export default function ProfilePage() {
 
   return <ProtectedWorkspace>
     <div className="page-heading"><div><span className="eyebrow">YOUR INFORMATION</span><h1>Student profile</h1><p>Keep your profile up to date to improve opportunity matching and eligibility checks.</p></div></div>
-    {loading ? <Loading label="Loading profile" /> : <>
+    {loading ? <Loading label="Loading profile" /> : !loaded ? <section className="empty-state" aria-labelledby="profile-load-error"><AlertCircle size={26} /><h2 id="profile-load-error">Your profile could not be loaded</h2><p>{error || "Check your connection and try again."}</p><button className="button button-primary" type="button" onClick={load}><RefreshCw size={15} /> Try again</button></section> : <>
       {error && <div className="inline-message error" role="alert">{error}</div>}
       {notice && <div className="inline-message" role="status">{notice}</div>}
-      <form className="panel" onSubmit={submit}>
+      <form className="panel" onSubmit={submit} aria-busy={saving}>
         <div className="panel-heading"><span className="panel-icon"><UserRound size={20} /></span><div><h2>Education and experience</h2><p>Only fields supported by the profile API are submitted.</p></div></div>
         <div className="form-grid">
           <label><span className="field-label">Name</span><input className="form-control" value={form.name || ""} onChange={(event) => update("name", event.target.value)} maxLength={200} autoComplete="name" /></label>

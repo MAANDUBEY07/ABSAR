@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, BookmarkCheck, CalendarDays, FileText, Sparkles } from "lucide-react";
+import { ArrowRight, BookmarkCheck, CalendarDays, FileText, RefreshCw, Sparkles } from "lucide-react";
 import ProtectedWorkspace from "@/components/ProtectedWorkspace";
 import OpportunityCard from "@/components/OpportunityCard";
 import DeadlineCard from "@/components/DeadlineCard";
@@ -10,6 +10,8 @@ import Loading from "@/components/Loading";
 import { api } from "@/services/api";
 import { APPLICATION_STATUS_LABELS } from "@/utils/constants";
 import { useAuth } from "@/hooks/useAuth";
+import DemoNotice from "@/components/DemoNotice";
+import { demoDashboard } from "@/utils/demo-data";
 
 function completion(profile) {
   if (!profile) return 0;
@@ -25,11 +27,14 @@ function dateLabel(value) {
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState(demoDashboard);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isDemo, setIsDemo] = useState(true);
   const load = useCallback(async () => {
-    setLoading(true); setError("");
+    setLoading(true);
+    setError("");
+    try {
     const results = await Promise.allSettled([
       api.profile(), api.recommendations({ limit: 4, offset: 0 }),
       api.applications({ limit: 100, offset: 0 }), api.calendar({ limit: 5, offset: 0 }),
@@ -37,21 +42,26 @@ export default function DashboardPage() {
     ]);
     const failed = results.find((result) => result.status === "rejected");
     if (failed) setError(failed.reason.message);
+    setIsDemo(Boolean(failed));
     const get = (index, fallback) => results[index].status === "fulfilled" ? results[index].value : fallback;
-    const applications = Array.isArray(get(2, [])) ? get(2, []) : [];
+    const applicationsValue = get(2, demoDashboard.applications);
+    const applications = Array.isArray(applicationsValue) ? applicationsValue : demoDashboard.applications;
     const recent = await Promise.all(applications.slice(0, 5).map(async (application) => {
+      if (application.opportunity) return application;
       try { const opportunity = await api.opportunity(application.opportunity_id); return { ...application, opportunity }; }
-      catch { return { ...application, opportunity: null }; }
+      catch { return { ...application, opportunity: demoDashboard.applications.find((item) => item.opportunity_id === application.opportunity_id)?.opportunity || null }; }
     }));
     setData({
-      profile: get(0, null),
-      recommendations: get(1, { items: [] }).items || [],
+      profile: get(0, demoDashboard.profile),
+      recommendations: get(1, { items: demoDashboard.recommendations }).items || demoDashboard.recommendations,
       applications,
       recent,
-      deadlines: Array.isArray(get(3, [])) ? get(3, []) : [],
-      notifications: Array.isArray(get(4, [])) ? get(4, []) : [],
+      deadlines: Array.isArray(get(3, demoDashboard.deadlines)) ? get(3, demoDashboard.deadlines) : demoDashboard.deadlines,
+      notifications: Array.isArray(get(4, demoDashboard.notifications)) ? get(4, demoDashboard.notifications) : demoDashboard.notifications,
     });
-    setLoading(false);
+    } finally {
+      setLoading(false);
+    }
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -66,9 +76,10 @@ export default function DashboardPage() {
   }).length;
 
   return <ProtectedWorkspace>
-    <div className="page-heading"><div><span className="eyebrow">YOUR WORKSPACE</span><h1>Welcome{data?.profile?.name ? `, ${data.profile.name}` : user?.email ? `, ${user.email.split("@")[0]}` : " back"}</h1><p>Your applications, deadlines and opportunity recommendations in one place.</p></div><Link className="button button-primary" href="/opportunities">Explore opportunities <ArrowRight size={15} /></Link></div>
-    {error && <div className="inline-message error" role="alert">Some dashboard information could not be loaded: {error}</div>}
-    {loading ? <Loading label="Loading your dashboard" /> : <>
+    <div className="page-heading"><div><span className="eyebrow">YOUR WORKSPACE</span><h1>Welcome{data?.profile?.name ? `, ${data.profile.name}` : user?.email ? `, ${user.email.split("@")[0]}` : " back"}</h1><p>Your applications, deadlines and opportunity recommendations in one place.</p></div><div className="dashboard-heading-actions"><button className="button button-secondary" type="button" onClick={load} disabled={loading}><RefreshCw size={15} /> Refresh</button><Link className="button button-primary" href="/opportunities">Explore opportunities <ArrowRight size={15} /></Link></div></div>
+    {isDemo && <DemoNotice>{error ? "Live dashboard services could not be reached; this sample workspace is read-only." : "Sample workspace data is shown while AVSAR connects to your services."}</DemoNotice>}
+    {error && <div className="inline-message error dashboard-error" role="alert"><span>Some dashboard information could not be loaded: {error}</span><button className="button button-secondary" type="button" onClick={load} disabled={loading}>Retry</button></div>}
+    {loading && !isDemo ? <Loading label="Loading your dashboard" /> : <>
       <section className="stats-grid" aria-label="Dashboard statistics">
         <article className="stat-card"><span className="stat-icon"><BookmarkCheck /></span><div><small>Saved opportunities</small><strong>{saved}</strong><span>In your application tracker</span></div></article>
         <article className="stat-card"><span className="stat-icon peach"><FileText /></span><div><small>In preparation</small><strong>{preparing}</strong><span>Applications being prepared</span></div></article>

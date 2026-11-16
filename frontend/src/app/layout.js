@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/providers/ThemeProvider";
 export const metadata = {
   title: "AVSAR — Your next opportunity starts here",
   description: "Discover student opportunities, check eligibility, review trust indicators and stay ahead of application deadlines.",
+  icons: { icon: "/avsar-logo-light.png" },
 };
 
 export default function RootLayout({ children }) {
