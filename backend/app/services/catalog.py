@@ -81,6 +81,12 @@ def create_opportunity(data):
 
 def opportunity(record_id):
     record = documents.get("opportunities", record_id)
+    if not record and record_id.startswith("live_"):
+        from app.services import category_sources
+
+        live = category_sources.get_listing(record_id)
+        if live:
+            record = documents.put("opportunities", record_id, live, insert_only=True)
     if not record and record_id.startswith("arbeitnow_"):
         from app.services import arbeitnow
 
