@@ -11,9 +11,11 @@ import {
   BookmarkPlus,
   CalendarDays,
   CheckCircle2,
+  Globe,
   LoaderCircle,
   MapPin,
   RefreshCw,
+  ShieldAlert,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
@@ -47,6 +49,9 @@ export default function OpportunityDetailPage() {
   const [checking, setChecking] = useState(false);
   const [trust, setTrust] = useState(null);
   const [checkingTrust, setCheckingTrust] = useState(false);
+  const [signalsExpanded, setSignalsExpanded] = useState(false);
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [manualText, setManualText] = useState("");
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -60,7 +65,8 @@ export default function OpportunityDetailPage() {
     }
     setLoading(true);
     try {
-      setOpportunity(await api.opportunity(id));
+      const opp = await api.opportunity(id);
+      setOpportunity(opp);
       setIsDemo(false);
     } catch (requestError) {
       setError(requestError.message);
@@ -98,7 +104,7 @@ export default function OpportunityDetailPage() {
     }
   }
 
-  async function checkEligibility() {
+  async function checkEligibility(customText = null) {
     setChecking(true);
     setError("");
     if (isDemo) {
@@ -107,7 +113,16 @@ export default function OpportunityDetailPage() {
       return;
     }
     try {
-      setEligibility(await api.eligibility(id));
+      const payload = customText ? { user_description: customText } : {};
+      const result = await api.eligibility(id, payload);
+      setEligibility(result);
+      if (result.source_summary || result.requirements) {
+        setOpportunity((prev) => ({
+          ...prev,
+          source_summary: result.source_summary || prev?.source_summary,
+          requirements: result.requirements || prev?.requirements,
+        }));
+      }
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -131,6 +146,26 @@ export default function OpportunityDetailPage() {
       setCheckingTrust(false);
     }
   }
+
+  const sourceSummary = opportunity?.source_summary || eligibility?.source_summary || null;
+  let sourceDomain = "";
+  try {
+    const rawUrl = opportunity?.source_url || opportunity?.application_url;
+    if (rawUrl) {
+      sourceDomain = new URL(rawUrl).hostname.replace(/^www\./, "");
+    }
+  } catch {}
+
+  const statusExplanations = {
+    VERIFIED: "Official source verified against trusted registry or canonical domain.",
+    UNVERIFIED: "Listing is unverified. Claims have not been verified against an official government or institutional registry.",
+    SUSPICIOUS: "Elevated risk signals detected. Review all terms carefully before applying.",
+    UNKNOWN: "Source verification has not been determined yet.",
+    EXPIRED: "This listing has passed its published deadline.",
+  };
+  const verificationStatus = String(trust?.verification_status || opportunity?.verification_status || "UNKNOWN").toUpperCase();
+  const statusExplanation = statusExplanations[verificationStatus] || statusExplanations.UNKNOWN;
+  const hasRiskSignals = Boolean(trust?.evidence && trust.evidence.length > 0);
 
   return (
     <ProtectedWorkspace>
@@ -177,52 +212,137 @@ export default function OpportunityDetailPage() {
                       : "Mode not specified"}
                   </span>
                 </div>
-                <section className="detail-section">
-                  <h2>About this opportunity</h2>
-                  <p className="preserve-lines">
-                    {opportunity.description || "No description has been provided."}
+                {/* PRIORITY 1: Readable Source Summary */}
+                <section className="detail-section source-summary-section">
+                  <div className="section-title-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+                    <h2>About this opportunity</h2>
+                    {sourceSummary?.source_language && (
+                      <span className="badge badge-neutral">
+                        Source language: {sourceSummary.source_language === "de" ? "German" : "English"}
+                      </span>
+                    )}
+                  </div>
+                  <p className="preserve-lines summary-overview">
+                    {sourceSummary?.overview || opportunity.description || "No overview provided."}
                   </p>
-                </section>
-                <section className="detail-section">
-                  <h2>Eligibility requirements</h2>
-                  {opportunity.requirements?.confirmed ? (
-                    <ul className="reason-list">
-                      {opportunity.requirements.graduation_years?.length > 0 && (
-                        <li>Graduation year: {opportunity.requirements.graduation_years.join(", ")}</li>
-                      )}
-                      {opportunity.requirements.degrees?.length > 0 && (
-                        <li>Degree: {opportunity.requirements.degrees.join(", ")}</li>
-                      )}
-                      {opportunity.requirements.branches?.length > 0 && (
-                        <li>Branch: {opportunity.requirements.branches.join(", ")}</li>
-                      )}
-                      {opportunity.requirements.min_cgpa != null && (
-                        <li>Minimum CGPA: {opportunity.requirements.min_cgpa}</li>
-                      )}
-                      {opportunity.requirements.locations?.length > 0 && (
-                        <li>Location: {opportunity.requirements.locations.join(", ")}</li>
-                      )}
-                      {opportunity.requirements.required_skills?.length > 0 && (
-                        <li>Required skills: {opportunity.requirements.required_skills.join(", ")}</li>
-                      )}
-                      {opportunity.requirements.preferred_skills?.length > 0 && (
-                        <li>Preferred skills: {opportunity.requirements.preferred_skills.join(", ")}</li>
-                      )}
-                    </ul>
-                  ) : (
-                    <p>Eligibility criteria have not been confirmed by the source.</p>
+
+                  <div className="summary-block">
+                    <h3>Who should apply or participate</h3>
+                    <p>{sourceSummary?.who_should_apply || "Students, recent graduates, or candidates meeting the stated requirements."}</p>
+                  </div>
+
+                  <div className="summary-block">
+                    <h3>Key requirements</h3>
+                    {sourceSummary?.key_requirements?.length > 0 ? (
+                      <ul className="reason-list">
+                        {sourceSummary.key_requirements.map((req, idx) => (
+                          <li key={idx}>{req}</li>
+                        ))}
+                      </ul>
+                    ) : opportunity.requirements?.confirmed ? (
+                      <ul className="reason-list">
+                        {opportunity.requirements.degrees?.length > 0 && <li>Degree: {opportunity.requirements.degrees.join(", ")}</li>}
+                        {opportunity.requirements.branches?.length > 0 && <li>Branch: {opportunity.requirements.branches.join(", ")}</li>}
+                        {opportunity.requirements.min_experience_months && <li>Experience: Minimum {opportunity.requirements.min_experience_months} months</li>}
+                        {opportunity.requirements.min_cgpa != null && <li>Minimum CGPA: {opportunity.requirements.min_cgpa}</li>}
+                        {opportunity.requirements.locations?.length > 0 && <li>Location: {opportunity.requirements.locations.join(", ")}</li>}
+                      </ul>
+                    ) : (
+                      <p style={{ color: "var(--muted)", margin: "4px 0" }}>
+                        Eligibility criteria have not been confirmed by the source. Review original source details below.
+                      </p>
+                    )}
+                  </div>
+
+                  {((opportunity.requirements?.required_skills?.length > 0) || (opportunity.requirements?.preferred_skills?.length > 0)) && (
+                    <div className="summary-block">
+                      <h3>Skills & technical competencies</h3>
+                      <div className="skills-chip-container">
+                        {opportunity.requirements.required_skills?.map((s) => (
+                          <span key={s} className="skill-chip required" title="Mandatory core skill">{s}</span>
+                        ))}
+                        {opportunity.requirements.preferred_skills?.map((s) => (
+                          <span key={s} className="skill-chip preferred" title="Preferred / nice-to-have skill">{s} (preferred)</span>
+                        ))}
+                      </div>
+                    </div>
                   )}
-                  <button
-                    className="button button-secondary"
-                    type="button"
-                    onClick={checkEligibility}
-                    disabled={checking}
-                  >
-                    {checking ? "Checking…" : "Check my eligibility"}
-                  </button>
+
+                  <div className="summary-block">
+                    <h3>Important dates & deadlines</h3>
+                    <ul className="reason-list">
+                      <li>Application deadline: {dateLabel(opportunity.deadline)}</li>
+                      {sourceSummary?.important_dates?.map((d, idx) => (
+                        <li key={idx}>{d}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="summary-block">
+                    <h3>Application & submission instructions</h3>
+                    <p>{sourceSummary?.application_instructions || "Submit your application directly through the official provider link."}</p>
+                  </div>
+                </section>
+
+                {/* PRIORITY 2: Complete Eligibility Workflow */}
+                <section className="detail-section eligibility-check-section">
+                  <h2>Eligibility check</h2>
+                  <p style={{ margin: "4px 0 12px", color: "var(--muted)", fontSize: "11px" }}>
+                    AVSAR deterministically evaluates your saved profile against evidence-backed criteria extracted from the source.
+                  </p>
+
+                  <div className="eligibility-actions">
+                    <button
+                      className="button button-primary"
+                      type="button"
+                      onClick={() => checkEligibility()}
+                      disabled={checking}
+                    >
+                      {checking ? (
+                        <>
+                          <LoaderCircle className="spin" size={15} /> Checking & analyzing source…
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles size={15} /> Check my eligibility
+                        </>
+                      )}
+                    </button>
+                    <button
+                      className="button button-secondary"
+                      type="button"
+                      onClick={() => setShowManualInput(!showManualInput)}
+                    >
+                      {showManualInput ? "Hide manual text review" : "Review with manual text input"}
+                    </button>
+                  </div>
+
+                  {/* Fallback Manual Review Input */}
+                  {showManualInput && (
+                    <div className="manual-review-card">
+                      <h4>Review requirements with your own text</h4>
+                      <p>If automated extraction could not fetch the source, paste the requirement or qualification text from the opportunity source:</p>
+                      <textarea
+                        className="manual-review-textarea"
+                        rows={3}
+                        placeholder="Paste requirement text here (e.g. 'Requires B.Tech Computer Science, 2 years Python experience, German C1')..."
+                        value={manualText}
+                        onChange={(e) => setManualText(e.target.value)}
+                      />
+                      <button
+                        className="button button-secondary button-sm"
+                        type="button"
+                        disabled={!manualText.trim() || checking}
+                        onClick={() => checkEligibility(manualText)}
+                        style={{ justifySelf: "start" }}
+                      >
+                        Evaluate with user-provided text
+                      </button>
+                    </div>
+                  )}
 
                   {eligibility && (
-                    <div className="eligibility-result">
+                    <div className="eligibility-result" style={{ marginTop: "16px" }}>
                       <div
                         style={{
                           display: "flex",
@@ -234,7 +354,7 @@ export default function OpportunityDetailPage() {
                       >
                         <EligibilityBadge status={eligibility.api_status} />
                         {Number.isFinite(eligibility.score) && (
-                          <span style={{ fontSize: "10px", fontWeight: 800, color: "#326e47" }}>
+                          <span style={{ fontSize: "11px", fontWeight: 800, color: "var(--green)" }}>
                             Criteria coverage: {Math.round(eligibility.score)}%
                           </span>
                         )}
@@ -243,8 +363,8 @@ export default function OpportunityDetailPage() {
                       <p
                         style={{
                           margin: "4px 0 8px",
-                          fontSize: "10px",
-                          color: "#375543",
+                          fontSize: "11px",
+                          color: "var(--ink)",
                           fontWeight: 700,
                         }}
                       >
@@ -257,7 +377,7 @@ export default function OpportunityDetailPage() {
                         <div className="criteria-warning-banner">
                           <AlertTriangle size={15} style={{ flexShrink: 0 }} />
                           <span>
-                            The source has not published or confirmed specific eligibility criteria. AVSAR cannot verify your eligibility without confirmed rules.
+                            Eligibility criteria could not be confirmed automatically by the source. Please review the original source listing or use the manual text review above.
                           </span>
                         </div>
                       )}
@@ -342,54 +462,114 @@ export default function OpportunityDetailPage() {
                     </div>
                   )}
                 </section>
-                <section className="detail-section">
+
+                {/* MEM 3: Redesigned Source & Verification Section */}
+                <section className="detail-section source-verification-section">
                   <h2>Source and verification</h2>
-                  <div className="source-details">
-                    <span>Source status</span>
-                    <TrustBadge
-                      status={opportunity.verification_status}
-                      report={trust}
-                    />
+
+                  {/* Part A: Source Information */}
+                  <div className="source-info-card">
+                    <div className="source-info-main">
+                      <div className="source-info-header">
+                        <span className="source-domain-badge">
+                          <Globe size={13} /> {sourceDomain || "Source website"}
+                        </span>
+                        <TrustBadge
+                          status={verificationStatus}
+                          report={trust}
+                        />
+                      </div>
+                      <p className="source-status-explanation">
+                        {statusExplanation}
+                      </p>
+                    </div>
                     {opportunity.source_url && (
-                      <a href={opportunity.source_url} target="_blank" rel="noreferrer">
-                        Open original source <ArrowUpRight size={13} />
+                      <a
+                        href={opportunity.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="source-external-link"
+                        aria-label={`Open original source at ${sourceDomain || "source website"}`}
+                      >
+                        <span>Open original source</span>
+                        <ArrowUpRight size={14} style={{ flexShrink: 0 }} />
                       </a>
                     )}
                   </div>
-                  <button
-                    className="button button-secondary"
-                    type="button"
-                    onClick={checkTrust}
-                    disabled={checkingTrust}
-                  >
-                    <ShieldCheck size={15} />
-                    {checkingTrust ? "Checking source signals…" : "Review source signals"}
-                  </button>
-                  {trust && (
-                    <div className="trust-report">
-                      <p>
-                        <strong>Risk signals: {trust.risk_level || "Not assessed"}</strong>
-                        {Number.isFinite(trust.risk_score) && <> · score {trust.risk_score}/100</>}
-                      </p>
-                      <p>Verification status: {trust.verification_status || "Unknown"}</p>
-                      {trust.evidence?.length > 0 ? (
-                        <ul className="reason-list">
-                          {trust.evidence.map((item, index) => (
-                            <li key={`${item.signal}-${index}`}>
-                              <strong>{item.signal}</strong>
-                              {item.quote ? ` — “${item.quote}”` : ""}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p>No rule-based risk signals were found in the checked fields.</p>
+
+                  {/* Part B: Risk Assessment */}
+                  <div className="risk-assessment-card">
+                    <div className="risk-metric-header">
+                      <div className="risk-metric-title">
+                        <ShieldAlert size={16} style={{ color: hasRiskSignals ? "var(--orange)" : "var(--green)" }} />
+                        <strong>Risk assessment</strong>
+                      </div>
+                      {Number.isFinite(trust?.risk_score) && (
+                        <span className="risk-score-pill">
+                          Risk score: {trust.risk_score}/100
+                        </span>
                       )}
-                      <p className="disclaimer">
-                        {trust.disclaimer ||
-                          "Risk signals are not a verified fraud classification. Confirm details with the original source."}
-                      </p>
                     </div>
-                  )}
+                    <p className="risk-explanation-text">
+                      {hasRiskSignals
+                        ? `${trust.evidence.length} potential risk signal(s) detected during rule-based inspection. Review details below.`
+                        : "No rule-based risk indicators were detected in the fields checked."}
+                    </p>
+                    <div className="risk-disclaimer-text">
+                      Note: Rule-based risk checks are safety indicators and do not represent verified proof of legitimacy or fraud.
+                    </div>
+
+                    {/* Part C: Expandable Source Signals */}
+                    <div className="signals-toggle-container">
+                      <button
+                        className="button button-secondary button-sm"
+                        type="button"
+                        onClick={() => {
+                          if (!trust && !checkingTrust) checkTrust();
+                          setSignalsExpanded(!signalsExpanded);
+                        }}
+                        disabled={checkingTrust}
+                        aria-expanded={signalsExpanded}
+                      >
+                        <ShieldCheck size={14} />
+                        {checkingTrust
+                          ? "Checking source signals…"
+                          : signalsExpanded
+                          ? "Hide source signals"
+                          : `Review source signals ${trust?.evidence?.length ? `(${trust.evidence.length})` : ""}`}
+                      </button>
+                    </div>
+
+                    {signalsExpanded && (
+                      <div className="signals-drawer">
+                        {trust?.evidence?.length > 0 ? (
+                          <ul className="signals-list">
+                            {trust.evidence.map((item, index) => (
+                              <li key={`${item.signal}-${index}`} className="signal-item">
+                                <div className="signal-badge-row">
+                                  <span className="badge badge-warning">{item.signal}</span>
+                                  {item.field && <small className="signal-field">Field: {item.field}</small>}
+                                </div>
+                                {item.quote && <blockquote className="signal-quote">“{item.quote}”</blockquote>}
+                                {item.reason && <p className="signal-reason">{item.reason}</p>}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <div className="signals-empty-state">
+                            <CheckCircle2 size={18} style={{ color: "var(--green)", flexShrink: 0 }} />
+                            <div>
+                              <strong>No risk indicators detected</strong>
+                              <p>No rule-based risk indicators were detected in the fields checked.</p>
+                            </div>
+                          </div>
+                        )}
+                        <p className="disclaimer" style={{ margin: "6px 0 0", fontSize: "9px", color: "var(--muted)" }}>
+                          {trust?.disclaimer || "Risk signals are heuristic and not proof of fraud. Always confirm terms with the original provider."}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </section>
               </article>
               <aside className="detail-aside">

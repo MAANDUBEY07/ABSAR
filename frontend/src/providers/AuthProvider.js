@@ -234,6 +234,13 @@ export function AuthProvider({ children }) {
     if (provider === "local") storeLocalToken(null);
     else await getSupabaseClient()?.auth.signOut();
     setUser(null);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("avsar_auth_tokens");
+        localStorage.removeItem("avsar_profile_cache");
+        sessionStorage.clear();
+      } catch {}
+    }
   }, [provider, user]);
 
   const value = useMemo(() => ({

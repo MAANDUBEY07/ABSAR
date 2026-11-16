@@ -10,7 +10,8 @@ export default function Navbar({ onMenuClick = () => {}, menuOpen = false }) {
   const { user, signOut } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
   const email = user?.email || "Student account";
-  const initials = (user?.user_metadata?.full_name || email).slice(0, 1).toUpperCase();
+  const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || "Student account";
+  const initials = (user?.user_metadata?.full_name || user?.email || "S").slice(0, 1).toUpperCase();
   async function handleSignOut() {
     setLoggingOut(true);
     await signOut();
@@ -27,7 +28,7 @@ export default function Navbar({ onMenuClick = () => {}, menuOpen = false }) {
       <div className="workspace-actions">
         <Link href="/dashboard#notifications" className="header-notice" aria-label="View notifications"><Bell size={18} /></Link>
         <ThemeToggle />
-        <Link href="/profile" className="workspace-user" title={email}><span className="workspace-avatar" aria-hidden="true">{initials}</span><span className="workspace-user-name">{email}</span></Link>
+        <Link href="/profile" className="workspace-user" title={email}><span className="workspace-avatar" aria-hidden="true">{initials}</span><span className="workspace-user-name">{displayName}</span></Link>
         <button className="button button-secondary navbar-signout" type="button" onClick={handleSignOut} disabled={loggingOut}>{loggingOut ? "Signing out…" : <><LogOut size={15} /> Sign out</>}</button>
       </div>
     </header>

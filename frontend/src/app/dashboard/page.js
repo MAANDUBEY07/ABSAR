@@ -50,8 +50,9 @@ export default function DashboardPage() {
       try { const opportunity = await api.opportunity(application.opportunity_id); return { ...application, opportunity }; }
       catch { return { ...application, opportunity: demoDashboard.applications.find((item) => item.opportunity_id === application.opportunity_id)?.opportunity || null }; }
     }));
+    const userProfile = results[0].status === "fulfilled" ? results[0].value : null;
     setData({
-      profile: get(0, demoDashboard.profile),
+      profile: userProfile,
       recommendations: get(1, { items: demoDashboard.recommendations }).items || demoDashboard.recommendations,
       applications,
       recent,
@@ -74,8 +75,10 @@ export default function DashboardPage() {
     return days >= 0 && days <= 7;
   }).length;
 
+  const displayName = data?.profile?.name || user?.user_metadata?.full_name || user?.user_metadata?.name || (user?.email ? user.email.split("@")[0] : null);
+
   return <ProtectedWorkspace>
-    <div className="page-heading"><div><span className="eyebrow">YOUR WORKSPACE</span><h1>Welcome{data?.profile?.name ? `, ${data.profile.name}` : user?.email ? `, ${user.email.split("@")[0]}` : " back"}</h1><p>Your applications, deadlines and opportunity recommendations in one place.</p></div><div className="dashboard-heading-actions"><button className="button button-secondary" type="button" onClick={load} disabled={loading}><RefreshCw size={15} /> Refresh</button><Link className="button button-primary" href="/opportunities">Explore opportunities <ArrowRight size={15} /></Link></div></div>
+    <div className="page-heading"><div><span className="eyebrow">YOUR WORKSPACE</span><h1>Welcome{displayName ? `, ${displayName}` : " back"}</h1><p>Your applications, deadlines and opportunity recommendations in one place.</p></div><div className="dashboard-heading-actions"><button className="button button-secondary" type="button" onClick={load} disabled={loading}><RefreshCw size={15} /> Refresh</button><Link className="button button-primary" href="/opportunities">Explore opportunities <ArrowRight size={15} /></Link></div></div>
     {error && <div className="inline-message error dashboard-error" role="alert"><span>Some dashboard information could not be loaded: {error}</span><button className="button button-secondary" type="button" onClick={load} disabled={loading}>Retry</button></div>}
     {loading && !data ? <Loading label="Loading your dashboard" /> : <>
       <section className="stats-grid" aria-label="Dashboard statistics">
