@@ -27,6 +27,11 @@ logger = logging.getLogger(__name__)
 TECHNICAL_SKILLS_TAXONOMY: dict[str, list[str]] = {
     # Programming Languages
     "python": ["python", "python3", "py"],
+    "sql": ["sql", "mysql", "sqlite", "tsql", "plsql"],
+    "postgresql": ["postgresql", "postgres"],
+    "bigquery": ["bigquery", "google bigquery"],
+    "r": ["r programming", "r language", r"(?<=[\s,(])r(?=[\s,)]|$)"],
+    "bash": ["bash", "shell scripting", "shell script"],
     "javascript": ["javascript", "js", "ecmascript"],
     "typescript": ["typescript", "ts"],
     "java": ["java", "core java", "j2ee"],
@@ -37,17 +42,69 @@ TECHNICAL_SKILLS_TAXONOMY: dict[str, list[str]] = {
     "rust": ["rust", "rustlang"],
     "kotlin": ["kotlin"],
     "swift": ["swift", "swiftui"],
-    "sql": ["sql", "mysql", "postgresql", "sqlite", "tsql", "plsql"],
     "html": ["html", "html5"],
     "css": ["css", "css3", "sass", "tailwind", "bootstrap"],
     "php": ["php"],
     "ruby": ["ruby", "ruby on rails"],
-    "r": ["r programming", "r language"],
+
+    # AI, ML & Data Science
+    "machine learning": ["machine learning", "ml", "pattern recognition"],
+    "deep learning": ["deep learning", "dl", "neural networks"],
+    "pytorch": ["pytorch"],
+    "tensorflow": ["tensorflow", "tf", "keras"],
+    "scikit-learn": ["scikit-learn", "sklearn"],
+    "xgboost": ["xgboost"],
+    "lightgbm": ["lightgbm"],
+    "hugging face transformers": [
+        "hugging face transformers",
+        "hugging face",
+        "huggingface",
+        "transformers",
+    ],
+    "pandas": ["pandas"],
+    "numpy": ["numpy"],
+    "nlp": ["nlp", "natural language processing", "spacy", "nltk", "distilbert", "bert"],
+    "computer vision": ["computer vision", "opencv"],
+    "generative ai": ["generative ai", "genai", "llm", "large language models"],
+    "langchain": ["langchain", "llamaindex", "rag"],
+    "hdbscan": ["hdbscan"],
+    "smote": ["smote"],
+    "isolation forests": ["isolation forests", "isolation forest"],
+    "prophet": ["prophet"],
+    "gradient boosting": ["gradient boosting"],
+
+    # Data Engineering & Cloud
+    "pyspark": ["pyspark", "spark", "apache spark"],
+    "apache airflow": ["apache airflow", "airflow"],
+    "dbt": ["dbt"],
+    "docker": ["docker", "containerization"],
+    "kubernetes": ["kubernetes", "k8s"],
+    "aws sagemaker": ["aws sagemaker", "sagemaker"],
+    "s3": ["aws s3", "s3", "amazon s3"],
+    "ec2": ["aws ec2", "ec2", "amazon ec2"],
+    "aws": ["aws", "amazon web services"],
+    "azure": ["azure", "microsoft azure"],
+    "gcp": ["gcp", "google cloud", "google cloud platform"],
+    "mlflow": ["mlflow"],
+    "fastapi": ["fastapi", "fast-api"],
+    "git": ["git", "github", "gitlab", "version control"],
+    "terraform": ["terraform"],
+    "ansible": ["ansible"],
+    "ci/cd": ["ci/cd", "continuous integration", "github actions", "jenkins"],
+    "linux": ["linux", "ubuntu"],
+
+    # Experimentation, Statistics & BI
+    "a/b testing": ["a/b testing", "ab testing", "split testing", "stratified a/b"],
+    "causal inference": ["causal inference"],
+    "bayesian statistics": ["bayesian statistics", "bayesian"],
+    "tableau": ["tableau"],
+    "matplotlib": ["matplotlib"],
+    "seaborn": ["seaborn"],
+
     # Frameworks & Libraries
     "react": ["react", "react.js", "reactjs", "react native"],
     "node.js": ["node", "node.js", "nodejs"],
     "next.js": ["next.js", "nextjs"],
-    "fastapi": ["fastapi", "fast-api"],
     "django": ["django", "django rest framework", "drf"],
     "flask": ["flask"],
     "express": ["express", "express.js", "expressjs"],
@@ -56,43 +113,21 @@ TECHNICAL_SKILLS_TAXONOMY: dict[str, list[str]] = {
     "vue.js": ["vue", "vue.js", "vuejs"],
     "tailwind css": ["tailwind", "tailwind css", "tailwindcss"],
     "redux": ["redux", "redux toolkit"],
-    # AI, ML & Data Science
-    "machine learning": ["machine learning", "ml", "pattern recognition"],
-    "deep learning": ["deep learning", "dl", "neural networks"],
-    "pytorch": ["pytorch"],
-    "tensorflow": ["tensorflow", "tf", "keras"],
-    "pandas": ["pandas"],
-    "numpy": ["numpy"],
-    "scikit-learn": ["scikit-learn", "sklearn"],
-    "nlp": ["nlp", "natural language processing", "spacy", "nltk", "transformers"],
-    "computer vision": ["computer vision", "opencv"],
-    "generative ai": ["generative ai", "genai", "llm", "large language models"],
-    "langchain": ["langchain", "llamaindex", "rag"],
-    "huggingface": ["huggingface", "hugging face"],
-    # Cloud & DevOps
-    "docker": ["docker", "containerization"],
-    "kubernetes": ["kubernetes", "k8s"],
-    "aws": ["aws", "amazon web services", "ec2", "s3", "lambda"],
-    "azure": ["azure", "microsoft azure"],
-    "gcp": ["gcp", "google cloud", "google cloud platform"],
-    "terraform": ["terraform"],
-    "ansible": ["ansible"],
-    "git": ["git", "github", "gitlab", "version control"],
-    "ci/cd": ["ci/cd", "continuous integration", "github actions", "jenkins"],
-    "linux": ["linux", "ubuntu", "bash", "shell scripting"],
+
     # Databases, Storage & Messaging
     "mongodb": ["mongodb", "mongo"],
     "redis": ["redis"],
-    "postgresql": ["postgresql", "postgres"],
     "elasticsearch": ["elasticsearch"],
     "firebase": ["firebase"],
     "supabase": ["supabase"],
     "kafka": ["kafka", "apache kafka"],
     "rabbitmq": ["rabbitmq"],
+
     # Mobile & Cross-Platform
     "flutter": ["flutter"],
     "react native": ["react native"],
     "android": ["android development", "android studio"],
+
     # Core CS, API & Testing
     "data structures": ["data structures", "dsa", "algorithms"],
     "system design": ["system design", "distributed systems", "microservices"],
@@ -180,6 +215,9 @@ class ResumeAnalysisResult(dict):
         document_id: str | None = None,
         evidence: list[dict[str, Any]] | None = None,
         disclaimer: str = "Resume claims; confirm explicitly through profile updates",
+        projects: list[dict[str, Any]] | None = None,
+        certifications: list[dict[str, Any]] | None = None,
+        publications: list[dict[str, Any]] | None = None,
     ) -> None:
         self.parsed_skills = parsed_skills
         self.experience_years = experience_years
@@ -199,6 +237,9 @@ class ResumeAnalysisResult(dict):
         self.document_id = document_id
         self.evidence = evidence or []
         self.disclaimer = disclaimer
+        self.projects = projects or []
+        self.certifications = certifications or []
+        self.publications = publications or []
 
         # If owner_id and document_id are supplied, populate dict with exact fields required by Member 2 ResumeAnalysis:
         if owner_id is not None and document_id is not None:
@@ -218,6 +259,9 @@ class ResumeAnalysisResult(dict):
                 recommendations=self.recommendations,
                 warnings=self.warnings,
                 disclaimer=self.disclaimer,
+                projects=self.projects,
+                certifications=self.certifications,
+                publications=self.publications,
             )
         else:
             payload: dict[str, Any] = {
@@ -231,6 +275,9 @@ class ResumeAnalysisResult(dict):
                 "readiness_breakdown": self.readiness_breakdown,
                 "recommendations": self.recommendations,
                 "warnings": self.warnings,
+                "projects": self.projects,
+                "certifications": self.certifications,
+                "publications": self.publications,
             }
             if self.matched_skills:
                 payload["matched_skills"] = self.matched_skills
@@ -272,6 +319,7 @@ def extract_skills_with_evidence(
     """
     Extracts canonical skills from resume text along with exact text quotes,
     character offsets, and evidence provenance for backend verification.
+    Handles multiline PDF text and flexible whitespace.
     Returns: (all_skills, technical_skills, soft_skills, evidence)
     """
     if not text:
@@ -285,8 +333,14 @@ def extract_skills_with_evidence(
     def _scan(taxonomy: dict[str, list[str]], target_set: set[str]):
         for canonical, aliases in taxonomy.items():
             for alias in aliases:
-                # Word boundary regex avoiding partial matches
-                pattern = rf"(?<![a-zA-Z0-9_#+]){re.escape(alias)}(?![a-zA-Z0-9_#+])"
+                # Handle regex alias or standard string alias with flexible whitespace across linebreaks
+                if alias.startswith("(?<="):
+                    pattern = alias
+                else:
+                    escaped = re.escape(alias)
+                    flexible_whitespace = escaped.replace(r"\ ", r"\s+")
+                    pattern = rf"(?<![a-zA-Z0-9_#+]){flexible_whitespace}(?![a-zA-Z0-9_#+])"
+
                 for match in re.finditer(pattern, normalized_text):
                     # Check for explicit negative context directly qualifying the skill (e.g. "no knowledge of Docker")
                     start_idx = max(0, match.start() - 60)
@@ -352,30 +406,176 @@ def extract_languages(text: str) -> list[dict[str, str]]:
     return [{"language": lang, "proficiency": prof} for lang, prof in sorted(results.items())]
 
 
-def extract_education(text: str) -> list[dict[str, Any]]:
-    """Extracts degrees, institutions, GPA, and graduation years from resume text."""
+def extract_projects(text: str) -> list[dict[str, Any]]:
+    """Extracts structured projects with name, technologies, and descriptions."""
     if not text:
         return []
 
-    # 1. Institutions: Look for standard institution names
-    inst_matches = re.findall(
-        r"^[ \t]*([A-Za-z0-9 &.,-]{2,80}?(?:University|Institute(?:\s+of\s+[A-Za-z]+)?|College|Academy|IIT|NIT|IIIT|BITS|School)[A-Za-z0-9 &.,-]*)",
+    proj_header = re.search(
+        r"\b(?:SELECTED\s+PROJECTS|ACADEMIC\s+PROJECTS|KEY\s+PROJECTS|PROJECTS)\b",
         text,
-        re.IGNORECASE | re.MULTILINE,
+        re.IGNORECASE,
     )
-    institution = None
-    if inst_matches:
-        cleaned_candidates = [
-            re.sub(r"[,0-9\s]+$", "", m.strip()).strip().title()
-            for m in inst_matches
-            if len(m.strip()) > 3
-        ]
-        if cleaned_candidates:
-            institution = max(set(cleaned_candidates), key=cleaned_candidates.count)
+    if not proj_header:
+        return []
 
-    # 2. GPA extraction
+    after_proj = text[proj_header.end() :]
+    next_header = re.search(
+        r"\n\s*(?:EDUCATION|CERTIFICATIONS|PUBLICATIONS|SKILLS|WORK\s+EXPERIENCE|EXPERIENCE)\b",
+        after_proj,
+        re.IGNORECASE,
+    )
+    proj_text = after_proj[: next_header.start()] if next_header else after_proj
+
+    raw_lines = [line.strip() for line in proj_text.strip().split("\n") if line.strip()]
+    projects: list[dict[str, Any]] = []
+    current_proj: dict[str, Any] | None = None
+
+    for line in raw_lines:
+        proj_title_match = re.match(
+            r"^([A-Z][A-Za-z0-9\- ]+?(?:Engine|Simulator|Platform|System|Application|Model|Pipeline|Dashboard|Tracker|Tool|Service|Classifier|Detector|Project))\s+([A-Za-z0-9+#.\- ]+,\s*[A-Za-z0-9+#.\- ]+.*)$",
+            line,
+        )
+        if proj_title_match:
+            name = proj_title_match.group(1).strip()
+            tech_str = proj_title_match.group(2).strip()
+            techs = [t.strip() for t in re.split(r"[,|•·]", tech_str) if t.strip()]
+            current_proj = {
+                "name": name,
+                "technologies": techs,
+                "description": "",
+            }
+            projects.append(current_proj)
+        elif current_proj is not None:
+            clean = re.sub(r"^[\s•·\-\*\u00b7\u2022\u25cf\u25cb\u25aa\u25ab\?\u2013\u2014]+", "", line).strip()
+            if not current_proj["description"]:
+                current_proj["description"] = clean
+            else:
+                current_proj["description"] += " " + clean
+
+    return projects
+
+
+def extract_certifications_and_publications(
+    text: str,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Extracts structured certifications and publications."""
+    if not text:
+        return [], []
+
+    cert_pub_header = re.search(
+        r"\b(?:CERTIFICATIONS?\s*(?:&|AND)?\s*PUBLICATIONS?|CERTIFICATIONS?|PUBLICATIONS?|LICENSES?)\b",
+        text,
+        re.IGNORECASE,
+    )
+    if not cert_pub_header:
+        return [], []
+
+    after_header = text[cert_pub_header.end() :]
+    next_header = re.search(
+        r"\n\s*(?:EDUCATION|PROJECTS|SKILLS|EXPERIENCE|WORK\s+EXPERIENCE)\b",
+        after_header,
+        re.IGNORECASE,
+    )
+    section_text = after_header[: next_header.start()] if next_header else after_header
+
+    raw_lines = [line.strip() for line in section_text.strip().split("\n") if line.strip()]
+    merged_lines: list[str] = []
+    bullet_re = r"^[\s•·\-\*\u00b7\u2022\u25cf\u25cb\u25aa\u25ab\?\u2013\u2014]+"
+    for line in raw_lines:
+        clean_prefix = re.sub(bullet_re, "", line).strip()
+        is_new_entry = bool(
+            re.match(bullet_re, line)
+            or re.match(
+                r"^(?:AWS|Google|Microsoft|Certified|Certificate|Co-Author|Author|\[\d+\])",
+                clean_prefix,
+                re.IGNORECASE,
+            )
+        )
+        if merged_lines and not is_new_entry:
+            merged_lines[-1] += " " + line
+        else:
+            merged_lines.append(line)
+
+    certifications: list[dict[str, Any]] = []
+    publications: list[dict[str, Any]] = []
+
+    for line in merged_lines:
+        clean = re.sub(bullet_re, "", line).strip()
+        if re.search(
+            r"\b(?:IEEE|Conference|Workshop|Journal|Transactions|Symposium|Co-Author|Author|Paper|Publication)\b",
+            clean,
+            re.IGNORECASE,
+        ) or '"' in clean:
+            q_match = re.search(r'"([^"]+)"', clean)
+            title = q_match.group(1) if q_match else None
+            author_match = re.search(r"\b(Co-Author|First Author|Author)\b", clean, re.IGNORECASE)
+            author = author_match.group(1) if author_match else None
+            if q_match:
+                after_title = clean[q_match.end() :]
+                venue = re.sub(r"^[\s—–·\u00b7\-?]+", "", after_title).strip() or None
+            else:
+                dash_split = re.split(r"\s*[-—–·\u00b7]\s*", clean)
+                venue = dash_split[-1].strip() if len(dash_split) > 1 else None
+
+            # Look for year in clean line (preferring parenthesized year or trailing year)
+            year_match = re.search(r"\((20[0-3]\d|199\d)\)", clean) or re.search(r"\b(20[0-3]\d|199\d)\b", clean)
+            year = int(year_match.group(1)) if year_match else None
+            publications.append(
+                {
+                    "title": title or clean,
+                    "authors": author,
+                    "venue": venue,
+                    "year": year,
+                }
+            )
+        elif re.search(
+            r"\b(?:Certified|Specialty|Practitioner|Architect|Developer|Certificate|License)\b",
+            clean,
+            re.IGNORECASE,
+        ):
+            year_match = re.search(r"\b(20[0-3]\d|199\d)\b", clean)
+            year = int(year_match.group(1)) if year_match else None
+            issuer = None
+            for cand in ["AWS", "Google Cloud", "GCP", "Microsoft Azure", "Azure", "HashiCorp"]:
+                if cand.lower() in clean.lower():
+                    issuer = cand
+                    break
+            name = re.sub(r"\s*\((?:Issued|Completed|Verified)?\s*\d{4}\)", "", clean).strip()
+            name = re.sub(r"^\s*·\s*", "", name).strip()
+            name = re.sub(r"\s*[?]\s*", " – ", name).strip()
+            certifications.append(
+                {
+                    "name": name,
+                    "issuer": issuer,
+                    "year": year,
+                }
+            )
+
+    return certifications, publications
+
+
+def extract_education(text: str) -> list[dict[str, Any]]:
+    """Extracts degrees, institutions, GPA/CGPA, and graduation years from resume text."""
+    if not text:
+        return []
+
+    # Isolate education section if present to avoid cross-section year interference
+    edu_header = re.search(r"\b(?:EDUCATION|ACADEMIC\s+BACKGROUND|QUALIFICATIONS)\b", text, re.IGNORECASE)
+    if edu_header:
+        after_header = text[edu_header.end() :]
+        next_header = re.search(
+            r"\n\s*(?:CERTIFICATIONS|PUBLICATIONS|PROJECTS|SKILLS|WORK\s+EXPERIENCE|EXPERIENCE)\b",
+            after_header,
+            re.IGNORECASE,
+        )
+        edu_section = after_header[: next_header.start()] if next_header else after_header
+    else:
+        edu_section = text
+
+    # 1. GPA / CGPA extraction within education section
     gpa_match = re.search(
-        r"\b(?:GPA|CGPA)\s*:\s*([0-9\.]+)\s*(?:/\s*([0-9\.]+))?\b", text, re.IGNORECASE
+        r"\b(?:CGPA|GPA)\s*:\s*([0-9\.]+)\s*(?:/\s*([0-9\.]+))?\b", edu_section, re.IGNORECASE
     )
     gpa_str = None
     if gpa_match:
@@ -383,10 +583,41 @@ def extract_education(text: str) -> list[dict[str, Any]]:
         max_score = gpa_match.group(2)
         gpa_str = f"{score} / {max_score}" if max_score else score
 
-    # 3. Collapse text for degree pattern matching across line breaks
-    collapsed = re.sub(r"\s+", " ", text)
+    # 2. Institution extraction: search lines inside education section, then fallback
+    inst_candidates = []
+    for line in edu_section.split("\n"):
+        line_clean = line.strip()
+        if not line_clean:
+            continue
+        parts = [p.strip() for p in line_clean.split("|")]
+        for p in parts:
+            if re.search(r"\b(?:University|Institute|College|Academy|School|IIIT|IIT|NIT|BITS)\b", p, re.IGNORECASE):
+                inst_cand = re.sub(r"\b(?:CGPA|GPA|Grade)\b.*$", "", p, flags=re.IGNORECASE).strip()
+                inst_cand = re.sub(r"\b(?:199\d|20[0-3]\d)\b.*$", "", inst_cand).strip()
+                inst_cand = inst_cand.strip(" ,.-")
+                if len(inst_cand) > 3:
+                    if inst_cand.isupper():
+                        inst_cand = inst_cand.title()
+                    inst_candidates.append(inst_cand)
 
-    # Degree patterns (ordered: specific degrees first, then generic)
+    institution = inst_candidates[0] if inst_candidates else None
+    if not institution:
+        inst_matches = re.findall(
+            r"^[ \t]*([A-Za-z0-9 &.,-]{2,80}?(?:University|Institute(?:\s+of\s+[A-Za-z]+)?|College|Academy|IIT|NIT|IIIT|BITS|School)[A-Za-z0-9 &.,-]*)",
+            text,
+            re.IGNORECASE | re.MULTILINE,
+        )
+        if inst_matches:
+            cleaned_candidates = [
+                re.sub(r"[,0-9\s]+$", "", m.strip()).strip().title()
+                for m in inst_matches
+                if len(m.strip()) > 3
+            ]
+            if cleaned_candidates:
+                institution = max(set(cleaned_candidates), key=cleaned_candidates.count)
+
+    collapsed = re.sub(r"\s+", " ", edu_section)
+
     degree_patterns = [
         (
             r"\b(Master\s+of\s+Business\s+Management|M\.?B\.?M\.?)\b",
@@ -419,12 +650,12 @@ def extract_education(text: str) -> list[dict[str, Any]]:
             "Business",
         ),
         (
-            r"\b(B\.?Tech|B\.?E\.?|Bachelor\s+of\s+Technology|Bachelor\s+of\s+Engineering)\b",
+            r"\b(B\.?Tech|B\.?E\.?|Bachelor\s+of\s+Technology|Bachelor\s+of\s+Engineering)(?:\s+in\s+([A-Za-z &(),\-]+?))?(?:\s+\d{4}|\s*[-–—]|\s*$)",
             "B.Tech",
             None,
         ),
         (
-            r"\b(M\.?Tech|M\.?E\.?|Master\s+of\s+Technology|Master\s+of\s+Engineering)\b",
+            r"\b(M\.?Tech|M\.?E\.?|Master\s+of\s+Technology|Master\s+of\s+Engineering)(?:\s+in\s+([A-Za-z &(),\-]+?))?(?:\s+\d{4}|\s*[-–—]|\s*$)",
             "M.Tech",
             None,
         ),
@@ -436,13 +667,12 @@ def extract_education(text: str) -> list[dict[str, Any]]:
         (r"\b(Higher\s+Secondary|Class\s+12th?|12th\s+Grade|HSC)\b", "Class 12th", None),
     ]
 
-    # Major / Branch patterns
-    branch_pattern = re.search(
-        r"\b(Computer\s+Science|Information\s+Technology|Mechanical|Electrical|Electronics|Civil|Data\s+Science|Artificial\s+Intelligence)\b",
-        text,
+    branch_match = re.search(
+        r"\b(?:in\s+)?(Computer\s+Science(?:\s*&\s*Engineering)?(?:\s*\([A-Za-z ]+\))?|Information\s+Technology|Mechanical|Electrical|Electronics|Civil|Data\s+Science|Artificial\s+Intelligence)\b",
+        edu_section,
         re.IGNORECASE,
     )
-    fallback_branch = branch_pattern.group(0).title() if branch_pattern else None
+    fallback_branch = branch_match.group(1).strip() if branch_match else None
 
     education_records: list[dict[str, Any]] = []
     seen_degrees: set[str] = set()
@@ -450,26 +680,57 @@ def extract_education(text: str) -> list[dict[str, Any]]:
     for regex, standard_degree, degree_field in degree_patterns:
         match = re.search(regex, collapsed, re.IGNORECASE)
         if match:
-            # Avoid duplicate or subset matches (e.g. Master of Business vs Master of Business Management)
             if any(standard_degree in s for s in seen_degrees):
                 continue
             seen_degrees.add(standard_degree)
 
-            # Look for start/end years near this degree
-            window = collapsed[max(0, match.start() - 100) : min(len(collapsed), match.end() + 100)]
-            year_range = re.findall(r"\b(20[0-3]\d|199\d)\s*[-–]\s*(20[0-3]\d|199\d)\b", window)
+            # Year range: inspect after degree first, then before
+            after_window = collapsed[match.start() : min(len(collapsed), match.end() + 100)]
+            year_range = re.findall(
+                r"\b(199\d|20[0-3]\d)\s*[-–—to]+\s*(199\d|20[0-3]\d|Present|Current)\b",
+                after_window,
+                re.IGNORECASE,
+            )
+            if not year_range:
+                before_window = collapsed[max(0, match.start() - 100) : match.end()]
+                year_range = re.findall(
+                    r"\b(199\d|20[0-3]\d)\s*[-–—to]+\s*(199\d|20[0-3]\d|Present|Current)\b",
+                    before_window,
+                    re.IGNORECASE,
+                )
+
             grad_year = None
             start_year = None
             if year_range:
                 sy, ey = year_range[0]
                 start_year = int(sy)
-                grad_year = int(ey)
+                grad_year = int(ey) if ey.isdigit() else None
             else:
-                years = [int(y) for y in re.findall(r"\b(199\d|20[0-3]\d)\b", window)]
+                years = [int(y) for y in re.findall(r"\b(199\d|20[0-3]\d)\b", after_window)]
+                if not years:
+                    years = [
+                        int(y)
+                        for y in re.findall(
+                            r"\b(199\d|20[0-3]\d)\b",
+                            collapsed[max(0, match.start() - 60) : match.end()],
+                        )
+                    ]
                 if years:
                     grad_year = max(years)
 
-            field = degree_field or fallback_branch
+            field = None
+            try:
+                field = (
+                    match.group(2).strip()
+                    if (match.lastindex and match.lastindex >= 2 and match.group(2))
+                    else None
+                )
+            except IndexError:
+                field = None
+
+            if not field:
+                field = degree_field or fallback_branch
+
             record: dict[str, Any] = {
                 "degree": standard_degree,
                 "field": field,
@@ -478,12 +739,15 @@ def extract_education(text: str) -> list[dict[str, Any]]:
             }
             if start_year:
                 record["start_year"] = start_year
-            if gpa_str and (("Bachelor" in standard_degree or "B." in standard_degree) or len(seen_degrees) == 1):
+            if gpa_str and (
+                ("Bachelor" in standard_degree or "B." in standard_degree)
+                or len(seen_degrees) == 1
+                or "GPA" in after_window
+            ):
                 record["gpa"] = gpa_str
 
             education_records.append(record)
 
-    # Fallback if no specific degree found but institution or year present
     if not education_records and (institution or re.findall(r"\b(199\d|20[0-3]\d)\b", text)):
         all_years = [int(y) for y in re.findall(r"\b(199\d|20[0-3]\d)\b", text)]
         education_records.append(
@@ -627,6 +891,8 @@ class ResumeAnalyzer:
         education = extract_education(resume_text)
         exp_years, date_warnings = estimate_experience_years_with_warnings(resume_text)
         languages = extract_languages(resume_text)
+        projects = extract_projects(resume_text)
+        certifications, publications = extract_certifications_and_publications(resume_text)
 
         # Baseline readiness based on resume completeness breakdown
         has_contact = bool(
@@ -637,7 +903,14 @@ class ResumeAnalyzer:
         education_score = 25.0 if education else 0.0
         exp_score = 25.0 if exp_years > 0 else 0.0
         tech_score = min(len(tech_skills) * 5.0, 20.0)
-        soft_lang_score = min(len(soft_skills) * 2.0 + len(languages) * 2.5, 20.0)
+        soft_lang_score = min(
+            len(soft_skills) * 2.5
+            + len(languages) * 2.5
+            + len(projects) * 5.0
+            + len(certifications) * 5.0
+            + len(publications) * 5.0,
+            20.0,
+        )
 
         total_score = contact_score + education_score + exp_score + tech_score + soft_lang_score
         readiness_score = min(max(total_score, 10.0), 100.0)
@@ -652,8 +925,8 @@ class ResumeAnalyzer:
             "score_type": "RESUME_COMPLETENESS",
             "explanation": (
                 "Calculated based on resume profile completeness (contact info, education credentials, "
-                "work experience history, technical/soft skills, and languages). Match readiness against "
-                "specific opportunities is evaluated during opportunity comparison."
+                "work experience history, technical/soft skills, languages, projects, certifications, and publications). "
+                "Match readiness against specific opportunities is evaluated during opportunity comparison."
             ),
         }
 
@@ -694,6 +967,9 @@ class ResumeAnalyzer:
             owner_id=owner_id,
             document_id=document_id,
             evidence=evidence,
+            projects=projects,
+            certifications=certifications,
+            publications=publications,
         )
 
     def analyze_pdf(
@@ -798,6 +1074,9 @@ class ResumeAnalyzer:
             owner_id=owner_id,
             document_id=document_id,
             evidence=base_result.evidence,
+            projects=base_result.projects,
+            certifications=base_result.certifications,
+            publications=base_result.publications,
         )
 
 

@@ -11,6 +11,7 @@ import {
   Sparkles,
   AlertTriangle,
   Languages,
+  FolderGit2,
 } from "lucide-react";
 import ProtectedWorkspace from "@/components/ProtectedWorkspace";
 import Loading from "@/components/Loading";
@@ -119,10 +120,17 @@ export default function ResumePage() {
     }
   }
 
-  const skills = analysis?.parsed_skills || analysis?.skills || analysis?.result?.skills || [];
-  const technicalSkills = Array.isArray(analysis?.technical_skills) ? analysis.technical_skills : [];
   const softSkills = Array.isArray(analysis?.soft_skills) ? analysis.soft_skills : [];
+  const skills = Array.isArray(analysis?.parsed_skills) && analysis.parsed_skills.length > 0
+    ? analysis.parsed_skills
+    : (Array.isArray(analysis?.skills) ? analysis.skills : []);
+  const technicalSkills = Array.isArray(analysis?.technical_skills) && analysis.technical_skills.length > 0
+    ? analysis.technical_skills
+    : skills.filter((s) => !softSkills.includes(s));
   const languages = Array.isArray(analysis?.languages) ? analysis.languages : [];
+  const projects = Array.isArray(analysis?.projects) ? analysis.projects : [];
+  const certifications = Array.isArray(analysis?.certifications) ? analysis.certifications : [];
+  const publications = Array.isArray(analysis?.publications) ? analysis.publications : [];
   const readinessScore = typeof analysis?.readiness_score === "number" ? Math.round(analysis.readiness_score) : null;
   const readinessBreakdown = analysis?.readiness_breakdown || null;
   const experienceYears = typeof analysis?.experience_years === "number" ? analysis.experience_years : null;
@@ -289,6 +297,81 @@ export default function ResumePage() {
                 </div>
               )}
 
+              {/* Projects section */}
+              {projects.length > 0 && (
+                <div className="projects-section" style={{ marginTop: "16px" }}>
+                  <h3 style={{ margin: "0 0 10px", fontSize: "12px", color: "#355340", fontWeight: 800, display: "flex", alignItems: "center", gap: "6px" }}>
+                    <FolderGit2 size={15} /> Key & academic projects
+                  </h3>
+                  <div style={{ display: "grid", gap: "10px" }}>
+                    {projects.map((proj, idx) => (
+                      <div key={idx} style={{ padding: "10px 14px", background: "#f8faf9", border: "1px solid #e1e8e4", borderRadius: "8px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: "6px", marginBottom: "4px" }}>
+                          <strong style={{ fontSize: "12px", color: "#1f2937" }}>{proj.name}</strong>
+                          {Array.isArray(proj.technologies) && proj.technologies.length > 0 && (
+                            <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                              {proj.technologies.map((tech) => (
+                                <span key={tech} style={{ fontSize: "9px", padding: "1px 6px", background: "#e8f4ec", color: "#2d5a3f", borderRadius: "4px", fontWeight: 600 }}>
+                                  {tech}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        {proj.description && (
+                          <p style={{ margin: 0, fontSize: "11px", color: "#4b5563", lineHeight: 1.45 }}>
+                            {proj.description}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Certifications & Publications section */}
+              {(certifications.length > 0 || publications.length > 0) && (
+                <div className="credentials-section" style={{ marginTop: "16px" }}>
+                  <h3 style={{ margin: "0 0 10px", fontSize: "12px", color: "#355340", fontWeight: 800, display: "flex", alignItems: "center", gap: "6px" }}>
+                    <Award size={15} /> Certifications & publications
+                  </h3>
+                  <div style={{ display: "grid", gap: "8px" }}>
+                    {certifications.map((cert, idx) => (
+                      <div key={`cert-${idx}`} style={{ padding: "8px 12px", background: "#f8faf9", border: "1px solid #e1e8e4", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+                        <div>
+                          <strong style={{ fontSize: "11px", color: "#1f2937" }}>{cert.name}</strong>
+                          {cert.issuer && <span style={{ fontSize: "10px", color: "#6b7280", marginLeft: "6px" }}>· {cert.issuer}</span>}
+                        </div>
+                        {cert.year && (
+                          <span style={{ fontSize: "10px", color: "#4b5563", fontWeight: 700 }}>
+                            {cert.year}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                    {publications.map((pub, idx) => (
+                      <div key={`pub-${idx}`} style={{ padding: "8px 12px", background: "#f8faf9", border: "1px solid #e1e8e4", borderRadius: "8px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: "6px" }}>
+                          <strong style={{ fontSize: "11px", color: "#1f2937" }}>
+                            {pub.authors ? `${pub.authors}: ` : ""}&ldquo;{pub.title}&rdquo;
+                          </strong>
+                          {pub.year && (
+                            <span style={{ fontSize: "10px", color: "#4b5563", fontWeight: 700 }}>
+                              {pub.year}
+                            </span>
+                          )}
+                        </div>
+                        {pub.venue && (
+                          <p style={{ margin: "3px 0 0", fontSize: "10px", color: "#6b7280" }}>
+                            {pub.venue}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Recommendations */}
               {recommendations.length > 0 && (
                 <div className="suggestions-block">
@@ -363,10 +446,13 @@ export default function ResumePage() {
                     )}
                   </div>
 
-                  {comparison.criteria_available === false ? (
+                  {comparison.criteria_available === false ||
+                  (!comparison.matched_required?.length &&
+                    !comparison.missing_required?.length &&
+                    !comparison.missing_preferred?.length) ? (
                     <div className="empty-state compact" style={{ marginTop: "12px", padding: "10px 12px" }}>
                       <p style={{ margin: 0, fontSize: "10px", color: "#6e7f73" }}>
-                        Skill criteria unavailable for this opportunity: The source listing did not specify required or preferred skills.
+                        Skill criteria unavailable for this opportunity: The source listing did not specify required or preferred skills, so matching cannot be evaluated.
                       </p>
                     </div>
                   ) : (

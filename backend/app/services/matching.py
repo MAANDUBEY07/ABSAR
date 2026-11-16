@@ -31,18 +31,20 @@ def compare_skills(skills, requirements=None, *, opportunity=None):
     # Fallback to opportunity metadata if required_skills is empty/unconfirmed
     if not required and opportunity:
         tags = opportunity.get("category_metadata", {}).get("tags", [])
+        extracted_from_tags = set()
         if isinstance(tags, list):
             norm_tags = normalized([t for t in tags if isinstance(t, str)])
             if norm_tags:
-                required = norm_tags
+                extracted_from_tags = norm_tags
 
-        if not required:
-            from app.services.resume_analyzer import extract_skills
+        from app.services.resume_analyzer import extract_skills
 
-            text_context = f"{opportunity.get('title', '')} {opportunity.get('description', '')}"
-            extracted_opp_skills = normalized(extract_skills(text_context))
-            if extracted_opp_skills:
-                required = extracted_opp_skills
+        text_context = f"{opportunity.get('title', '')} {opportunity.get('description', '')}"
+        extracted_opp_skills = normalized(extract_skills(text_context))
+
+        combined = extracted_from_tags | extracted_opp_skills
+        if combined:
+            required = combined
 
     criteria_available = bool(required or preferred)
     has_missing_opportunity_criteria = not criteria_available

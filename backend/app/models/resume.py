@@ -44,3 +44,6 @@ class ResumeAnalysis(BaseModel):
     recommendations: list[str] | None = None
     warnings: list[str] = Field(default_factory=list)
     disclaimer: str
+    projects: list[dict] | None = None
+    certifications: list[dict] | None = None
+    publications: list[dict] | None = None

@@ -80,6 +80,7 @@ def match_resume(opportunity_id: str, body: ResumeMatchInput, owner: Owner):
     if not analysis:
         raise HTTPException(404, "Resume analysis not found")
     opp = opportunity(opportunity_id)
+    candidate_skills = analysis.get("skills") or analysis.get("parsed_skills") or []
     return ok(
-        compare_skills(analysis["skills"], opp.get("requirements", {}), opportunity=opp)
+        compare_skills(candidate_skills, opp.get("requirements", {}), opportunity=opp)
     )

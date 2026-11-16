@@ -341,6 +341,112 @@ class TestResumeAnalyzerService(unittest.TestCase):
         self.assertEqual(validated.owner_id, "usr_michael")
         self.assertEqual(validated.document_id, "doc_adams")
 
+    def test_aarav_sharma_resume_accuracy_extraction(self):
+        """Regression test for Aarav Sharma resume:
+
+        Verifies extraction of all 30+ technical skills from grouped headings,
+        accurate education (IIIT Sri City, 2018-2022, CGPA 8.84),
+        projects, certifications, publications, 4.0 years experience,
+        100% readiness completeness with transparent breakdown,
+        and strict validation against Member 2 Pydantic schema with extra='forbid'.
+        """
+        fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "Aarav_Sharma_Data_Scientist_CV.pdf")
+        if os.path.exists(fixture_path):
+            with open(fixture_path, "rb") as f:
+                pdf_bytes = f.read()
+            from app.services.resume_analyzer import extract_text_from_pdf_bytes
+            resume_text = extract_text_from_pdf_bytes(pdf_bytes)
+        else:
+            resume_text = (
+                "Aarav Sharma\nSenior Data Scientist\n"
+                "Bengaluru, Karnataka, India | +91 98765 43210 | aarav.sharma.ds@email.com\n"
+                "LinkedIn: linkedin.com/in/aaravsharma-ds | GitHub: github.com/aaravsharma-ml\n"
+                "PROFESSIONAL SUMMARY\n"
+                "Data Scientist with 4+ years of experience designing, validating, and deploying end-to-end machine learning pipelines.\n"
+                "TECHNICAL SKILLS\n"
+                "Languages Python, SQL (PostgreSQL, BigQuery), R, Bash\n"
+                "Machine Learning & AI Scikit-Learn, XGBoost, LightGBM, PyTorch, TensorFlow, Hugging Face Transformers\n"
+                "Data Engineering Pandas, NumPy, PySpark, Apache Airflow, dbt\n"
+                "MLOps & Cloud Docker, Kubernetes, AWS (SageMaker, S3, EC2), MLflow, FastAPI, Git\n"
+                "Experimentation & BI A/B Testing, Causal Inference, Bayesian Statistics, Tableau, Matplotlib, Seaborn\n"
+                "WORK EXPERIENCE\n"
+                "Senior Data Scientist | FinPulse Technologies, Bengaluru July 2024 – Present\n"
+                "Data Scientist | CartWave Retail Analytics, Bengaluru June 2022 – June 2024\n"
+                "Data Science Intern | QuantEdge Solutions, Hyderabad January 2022 – May 2022\n"
+                "SELECTED PROJECTS\n"
+                "Real-Time Fraud Detection Engine PyTorch, Isolation Forests, FastAPI\n"
+                "Dynamic Surge Pricing Simulator HDBSCAN, Gradient Boosting, Python\n"
+                "EDUCATION\n"
+                "B.Tech in Computer Science & Engineering (Data Science) 2018 – 2022\n"
+                "Indian Institute of Information Technology (IIIT), Sri City | CGPA: 8.84 / 10.0\n"
+                "CERTIFICATIONS & PUBLICATIONS\n"
+                "AWS Certified Machine Learning – Specialty (Issued 2024)\n"
+                "Co-Author: \"Handling Concept Drift in High-Frequency Tabular Streams\" — IEEE International Conference on Data Mining Workshops (2023)\n"
+            )
+
+        result = analyze_resume(resume_text, owner_id="usr_aarav", document_id="doc_aarav")
+
+        # 1. Experience years: 4.0 years
+        self.assertEqual(result.experience_years, 4.0)
+
+        # 2. Education: B.Tech, IIIT Sri City, 2022, CGPA 8.84 / 10.0
+        self.assertGreaterEqual(len(result.education), 1)
+        edu = result.education[0]
+        self.assertEqual(edu["degree"], "B.Tech")
+        self.assertIn("Computer Science", edu["field"])
+        self.assertIn("Indian Institute of Information Technology", edu["institution"])
+        self.assertIn("Sri City", edu["institution"])
+        self.assertEqual(edu["graduation_year"], 2022)
+        self.assertEqual(edu["gpa"], "8.84 / 10.0")
+
+        # 3. Technical Skills: All expected technical skills extracted
+        expected_tech = {
+            "python", "sql", "postgresql", "bigquery", "r", "bash",
+            "scikit-learn", "xgboost", "lightgbm", "pytorch", "tensorflow",
+            "hugging face transformers", "pandas", "numpy", "pyspark", "apache airflow", "dbt",
+            "docker", "kubernetes", "aws sagemaker", "s3", "ec2", "mlflow", "fastapi", "git",
+            "a/b testing", "causal inference", "bayesian statistics", "tableau", "matplotlib", "seaborn",
+        }
+        extracted_tech = set(result.get("technical_skills", []))
+        self.assertTrue(expected_tech.issubset(extracted_tech), f"Missing tech skills: {expected_tech - extracted_tech}")
+        self.assertIn("parsed_skills", result)
+        self.assertTrue(expected_tech.issubset(set(result.skills)))
+
+        # 4. Structured projects, certifications and publications
+        self.assertEqual(len(result.get("projects", [])), 2)
+        proj_names = [p["name"] for p in result["projects"]]
+        self.assertIn("Real-Time Fraud Detection Engine", proj_names)
+        self.assertIn("Dynamic Surge Pricing Simulator", proj_names)
+
+        self.assertGreaterEqual(len(result.get("certifications", [])), 1)
+        self.assertTrue(any("AWS Certified Machine Learning" in c["name"] for c in result["certifications"]))
+
+        self.assertGreaterEqual(len(result.get("publications", [])), 1)
+        pub = result["publications"][0]
+        self.assertIn("Handling Concept Drift", pub["title"])
+        self.assertIn("IEEE", pub.get("venue", ""))
+
+        # 5. Transparent 100% profile completeness score breakdown
+        breakdown = result.get("readiness_breakdown")
+        self.assertIsNotNone(breakdown)
+        self.assertEqual(breakdown["score_type"], "RESUME_COMPLETENESS")
+        self.assertEqual(breakdown["contact_score"], 10.0)
+        self.assertEqual(breakdown["education_score"], 25.0)
+        self.assertEqual(breakdown["experience_score"], 25.0)
+        self.assertEqual(breakdown["technical_skills_score"], 20.0)
+        self.assertEqual(breakdown["soft_skills_and_languages_score"], 20.0)
+        self.assertEqual(breakdown["total_score"], 100.0)
+        self.assertEqual(result.readiness_score, 100.0)
+
+        # 6. Strict validation against Member 2 Pydantic schema
+        validated = ResumeAnalysis.model_validate(result)
+        self.assertEqual(validated.owner_id, "usr_aarav")
+        self.assertEqual(validated.document_id, "doc_aarav")
+        self.assertTrue(expected_tech.issubset(set(validated.skills)))
+        self.assertEqual(len(validated.projects), 2)
+        self.assertEqual(len(validated.certifications), 1)
+        self.assertEqual(len(validated.publications), 1)
+
     def test_opportunity_matching_fallback_and_missing_criteria(self):
         """Verify opportunity matching falls back to tags/descriptions when requirements
 
