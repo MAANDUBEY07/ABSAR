@@ -315,3 +315,43 @@ button:disabled { opacity: .55; cursor: not-allowed; }
   .dashboard-heading-actions { width: 100%; }
   .dashboard-heading-actions .button { flex: 1 1 auto; justify-content: center; }
 }
+
+/* Resume Analysis & Metrics */
+.resume-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.resume-stat-item { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid #e5ece4; border-radius: 11px; background: #fbfdfb; }
+.resume-stat-icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 9px; flex-shrink: 0; }
+.resume-stat-icon.green { background: #eaf6df; color: #357f4e; }
+.resume-stat-icon.blue { background: #e6f1f8; color: #2e6c8e; }
+.resume-stat-icon.amber { background: #fcf4e3; color: #8f6927; }
+.resume-stat-info { display: grid; gap: 2px; }
+.resume-stat-info strong { font-size: 16px; color: #203c2d; font-weight: 800; line-height: 1.1; }
+.resume-stat-info span { font-size: 8px; color: #7f8e83; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
+.education-section { margin-top: 18px; padding-top: 15px; border-top: 1px solid #edf1ec; }
+.education-section h3 { margin: 0 0 10px; color: #355340; font-size: 12px; font-weight: 800; }
+.education-cards { display: grid; gap: 8px; }
+.education-card { display: flex; align-items: flex-start; gap: 11px; padding: 11px 13px; border: 1px solid #e7eee6; border-radius: 9px; background: #fff; }
+.education-card .edu-icon { color: #3b8755; margin-top: 2px; flex-shrink: 0; }
+.education-card strong { font-size: 11px; color: #244130; }
+.education-card p { margin: 2px 0 0; font-size: 9px; color: #839186; }
+.resume-warnings { margin-top: 14px; padding: 10px 12px; border-radius: 8px; background: #fff8eb; border: 1px solid #f6e8cc; display: grid; gap: 6px; }
+.resume-warnings p { margin: 0; font-size: 9px; color: #946927; display: flex; align-items: center; gap: 6px; }
+.match-card { margin-top: 18px; padding: 16px; border: 1px solid #dcebd8; border-radius: 12px; background: #f9fdf8; }
+.match-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.match-header h3 { margin: 0; font-size: 13px; color: #22432e; }
+.match-score-badge { font-size: 10px; font-weight: 800; padding: 4px 9px; border-radius: 6px; background: #e3f5dc; color: #2e7144; border: 1px solid #cdeac3; }
+
+/* Opportunity Eligibility Breakdown */
+.criteria-group { margin-top: 14px; padding-top: 12px; border-top: 1px solid #e4ede3; }
+.criteria-heading { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; font-size: 11px; font-weight: 800; }
+.criteria-heading.success { color: #2f7345; }
+.criteria-heading.danger { color: #a94b3e; }
+.criteria-heading.warning { color: #966b26; }
+.criteria-items { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.criteria-item { font-size: 9px; color: #556c5e; line-height: 1.5; }
+.criteria-item strong { color: #254231; }
+.criteria-actual { color: #7f8e83; }
+.missing-hint { font-size: 9px; color: #83672d; margin: 0 0 6px; }
+.criteria-warning-banner { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; margin-top: 10px; border-radius: 8px; background: #fef8ee; border: 1px solid #f6e6cb; color: #8e6524; font-size: 9px; }
+@media (max-width: 560px) {
+  .resume-stats { grid-template-columns: 1fr; }
+}

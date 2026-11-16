@@ -83,3 +83,41 @@ test("Late-arriving restoration does not overwrite newly uploaded analysis", () 
   assert.equal(stateDuringUpload.analysis, null);
   assert.equal(stateDuringUpload.documentId, "doc-new-456");
 });
+
+test("Restored resume analysis preserves full credentials contract", () => {
+  const completeAnalysis = {
+    document_id: "doc-xyz-789",
+    skills: ["python", "fastapi", "react"],
+    parsed_skills: ["python", "fastapi", "react"],
+    experience_years: 3.5,
+    education: [
+      {
+        degree: "B.Tech",
+        field: "Computer Science",
+        institution: "National Institute of Technology",
+        graduation_year: 2024,
+      },
+    ],
+    readiness_score: 88.0,
+    recommendations: ["Add cloud certifications to strengthen deployment capabilities."],
+    warnings: ["Rule-based estimates; absence of evidence is not proof of no experience"],
+    disclaimer: "Deterministic resume claims and completeness score; not verified qualifications",
+  };
+
+  const state = applyRestorationState({
+    currentAnalysis: null,
+    currentDocId: "",
+    busy: false,
+    savedAnalysis: completeAnalysis,
+  });
+
+  assert.equal(state.documentId, "doc-xyz-789");
+  assert.equal(state.analysis.experience_years, 3.5);
+  assert.equal(state.analysis.readiness_score, 88.0);
+  assert.equal(state.analysis.education.length, 1);
+  assert.equal(state.analysis.education[0].degree, "B.Tech");
+  assert.equal(state.analysis.education[0].institution, "National Institute of Technology");
+  assert.deepEqual(state.analysis.recommendations, [
+    "Add cloud certifications to strengthen deployment capabilities.",
+  ]);
+});
