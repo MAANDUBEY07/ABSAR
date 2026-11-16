@@ -146,7 +146,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="auth-shell">
+    <main className="auth-shell auth-page">
       <header className="auth-topbar">
         <Link href="/" className="back-link">
           <ArrowLeft size={16} /> Back to home
