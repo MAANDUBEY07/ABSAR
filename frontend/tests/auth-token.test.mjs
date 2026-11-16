@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { resolveAccessToken, unauthorizedAuthAction } from "../src/services/auth-token.mjs";
+import { returnToFromSearch, safeReturnTo } from "../src/utils/returnTo.mjs";
 
 const now = 1_800_000_000_000;
 const validSession = {
@@ -53,4 +54,15 @@ test("signs out when Supabase confirms the session or refresh token is invalid",
 test("local authentication continues to use only the local token", () => {
   assert.equal(resolveAccessToken("local", { localToken: "local-token", supabaseSession: validSession }, now), "local-token");
   assert.equal(unauthorizedAuthAction("local", {}), "clear-local");
+});
+
+test("protected navigation keeps an internal destination and query string", () => {
+  assert.equal(returnToFromSearch("?next=%2Fopportunities%3Fcategory%3Dgrant%23results"), "/opportunities?category=grant#results");
+});
+
+test("return navigation rejects external and malformed destinations", () => {
+  assert.equal(safeReturnTo("https://example.com/steal-session"), "/dashboard");
+  assert.equal(safeReturnTo("//example.com/path"), "/dashboard");
+  assert.equal(safeReturnTo("/\\example.com/path"), "/dashboard");
+  assert.equal(returnToFromSearch("?next="), "/dashboard");
 });

@@ -1,30 +1,41 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { UserRound, Save } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { AlertCircle, RefreshCw, UserRound, Save } from "lucide-react";
 import ProtectedWorkspace from "@/components/ProtectedWorkspace";
 import Loading from "@/components/Loading";
 import { api } from "@/services/api";
 import {
   EMPTY_PROFILE,
-  toForm,
   buildProfilePayload,
+  toForm,
 } from "@/services/profile-contract.mjs";
 
 export default function ProfilePage() {
   const [form, setForm] = useState(EMPTY_PROFILE);
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  useEffect(() => {
-    api
-      .profile()
-      .then((profile) => setForm(toForm(profile)))
-      .catch((requestError) => setError(requestError.message))
-      .finally(() => setLoading(false));
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await api.profile();
+      setForm(toForm(data));
+      setLoaded(true);
+    } catch (requestError) {
+      setError(requestError?.message || "Failed to load profile.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   function update(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -63,13 +74,23 @@ export default function ProfilePage() {
           <p>Keep your profile up to date to improve opportunity matching and eligibility checks.</p>
         </div>
       </div>
+
       {loading ? (
         <Loading label="Loading profile" />
+      ) : !loaded ? (
+        <section className="empty-state" aria-labelledby="profile-load-error">
+          <AlertCircle size={26} />
+          <h2 id="profile-load-error">Your profile could not be loaded</h2>
+          <p>{error || "Check your connection and try again."}</p>
+          <button className="button button-primary" type="button" onClick={load}>
+            <RefreshCw size={15} /> Try again
+          </button>
+        </section>
       ) : (
         <>
           {error && <div className="inline-message error" role="alert">{error}</div>}
           {notice && <div className="inline-message" role="status">{notice}</div>}
-          <form className="panel" onSubmit={submit}>
+          <form className="panel" onSubmit={submit} aria-busy={saving}>
             <div className="panel-heading">
               <span className="panel-icon"><UserRound size={20} /></span>
               <div>
@@ -77,6 +98,7 @@ export default function ProfilePage() {
                 <p>Only fields supported by the profile API are submitted.</p>
               </div>
             </div>
+
             <div className="form-grid">
               <label>
                 <span className="field-label">Name</span>
@@ -88,87 +110,102 @@ export default function ProfilePage() {
                   autoComplete="name"
                 />
               </label>
+
               <label>
                 <span className="field-label">Date of birth</span>
                 <input
                   className="form-control"
                   type="date"
-                  value={form.date_of_birth || ""}
+                  value={form.date_of_birth}
                   onChange={(event) => update("date_of_birth", event.target.value)}
                 />
               </label>
+
               <label>
                 <span className="field-label">Degree</span>
                 <input
                   className="form-control"
                   value={form.degree || ""}
                   onChange={(event) => update("degree", event.target.value)}
+                  maxLength={100}
                 />
               </label>
+
               <label>
-                <span className="field-label">Branch / field</span>
+                <span className="field-label">Branch / Field of study</span>
                 <input
                   className="form-control"
                   value={form.branch || ""}
                   onChange={(event) => update("branch", event.target.value)}
+                  maxLength={100}
                 />
               </label>
+
               <label>
-                <span className="field-label">CGPA (0–10)</span>
+                <span className="field-label">CGPA</span>
                 <input
                   className="form-control"
                   type="number"
+                  step="0.01"
                   min="0"
                   max="10"
-                  step="0.01"
                   value={form.cgpa}
                   onChange={(event) => update("cgpa", event.target.value)}
                 />
               </label>
+
               <label>
                 <span className="field-label">Graduation year</span>
                 <input
                   className="form-control"
                   type="number"
-                  min="1950"
-                  max="2150"
+                  min="1990"
+                  max="2100"
                   value={form.graduation_year}
                   onChange={(event) => update("graduation_year", event.target.value)}
                 />
               </label>
+
               <label>
-                <span className="field-label">Location / state</span>
+                <span className="field-label">Location / City</span>
                 <input
                   className="form-control"
                   value={form.location || ""}
                   onChange={(event) => update("location", event.target.value)}
+                  maxLength={100}
                 />
               </label>
+
               <label>
                 <span className="field-label">Experience (months)</span>
                 <input
                   className="form-control"
                   type="number"
                   min="0"
-                  max="1200"
+                  max="600"
                   value={form.experience_months}
                   onChange={(event) => update("experience_months", event.target.value)}
                 />
               </label>
-              <label className="full-span">
-                <span className="field-label">Skills (comma separated)</span>
-                <textarea
+            </div>
+
+            <div className="form-grid single-column">
+              <label>
+                <span className="field-label">Skills (comma-separated)</span>
+                <input
                   className="form-control"
-                  rows="3"
-                  value={form.skills}
+                  value={form.skills || ""}
                   onChange={(event) => update("skills", event.target.value)}
-                  placeholder="e.g. Python, research, communication"
+                  placeholder="Python, React, Fastapi"
                 />
               </label>
             </div>
+
             <details className="detail-section">
-              <summary>Optional eligibility information</summary>
-              <p>Provide these facts only when an opportunity you choose requires them. Missing information stays unknown.</p>
+              <summary>
+                <h2>Extended eligibility fields</h2>
+                <small>Optional attributes checked by scholarships and government schemes.</small>
+              </summary>
               <div className="form-grid">
                 <label>
                   <span className="field-label">Gender (as required by the source)</span>
@@ -218,6 +255,7 @@ export default function ProfilePage() {
                 </label>
               </div>
             </details>
+
             <div className="detail-section">
               <h2>Opportunity preferences</h2>
               <div className="form-grid">
@@ -266,6 +304,7 @@ export default function ProfilePage() {
                 </label>
               </div>
             </div>
+
             <div className="form-actions">
               <span className="form-feedback">Your profile is private to your account.</span>
               <button className="button button-primary" type="submit" disabled={saving}>

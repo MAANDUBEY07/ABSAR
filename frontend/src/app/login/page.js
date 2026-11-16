@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, CheckCircle2, KeyRound, Mail, RefreshCw } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import ThemeToggle from "@/components/ThemeToggle";
+import BrandLogo from "@/components/BrandLogo";
+import { returnToFromSearch } from "@/utils/returnTo.mjs";
 
 const RESEND_COOLDOWN_SEC = 60;
 
@@ -21,11 +23,14 @@ export default function LoginPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [returnTo, setReturnTo] = useState("/dashboard");
 
   const otpInputRefs = useRef([]);
 
   useEffect(() => {
-    if (!loading && user) router.replace("/dashboard");
+    const destination = returnToFromSearch(window.location.search);
+    setReturnTo(destination);
+    if (!loading && user) router.replace(destination);
   }, [loading, user, router]);
 
   // Handle countdown timer for resend cooldown
@@ -119,59 +124,65 @@ export default function LoginPage() {
   // Step 2: Verify OTP
   async function handleVerifyOtp(event) {
     if (event) event.preventDefault();
-    const token = otp.join("");
+    const token = otp.join("").trim();
     if (token.length !== 6) {
-      setError("Please enter the complete 6-digit OTP code.");
+      setError("Please enter the complete 6-digit verification code.");
       return;
     }
 
     setError("");
-    setSuccessMsg("");
     setBusy(true);
 
     try {
       await verifyOtp({ email, token });
       setStep("success");
-      setSuccessMsg("Verification successful! Redirecting to dashboard…");
-      setTimeout(() => router.replace("/dashboard"), 1200);
-    } catch (verifyError) {
-      setError(verifyError.message || "Invalid or expired code. Please try again.");
-    } finally {
+      setTimeout(() => {
+        router.replace(returnTo);
+      }, 800);
+    } catch (requestError) {
+      setError(requestError.message || "Verification code is invalid or has expired.");
       setBusy(false);
     }
   }
 
   return (
-    <main className="auth-page">
-      <ThemeToggle className="auth-theme-toggle" />
-      <Link href="/" className="back-link">
-        <ArrowLeft size={15} /> Back to AVSAR
-      </Link>
+    <main className="auth-shell">
+      <header className="auth-topbar">
+        <Link href="/" className="back-link">
+          <ArrowLeft size={16} /> Back to home
+        </Link>
+        <ThemeToggle />
+      </header>
 
       <section className="auth-card" aria-labelledby="login-title">
-        <Link href="/" className="brand-lockup centered">
-          <span className="brand-symbol">A</span>
-          <span>avsar<small>YOUR OPPORTUNITY DESK</small></span>
+        <Link href="/" className="brand-lockup centered" aria-label="AVSAR home">
+          <BrandLogo size={88} />
         </Link>
 
         <div className="auth-title">
           <span className="auth-icon">
-            {step === "success" ? <CheckCircle2 size={21} /> : <KeyRound size={21} />}
+            <KeyRound size={21} />
           </span>
-          <h1 id="login-title">
-            {step === "otp" ? "Enter verification code" : step === "success" ? "Authenticated" : "Welcome back"}
-          </h1>
+          <h1 id="login-title">Welcome back</h1>
           <p>
-            {step === "otp"
-              ? `We sent a 6-digit code to ${email}`
-              : step === "success"
-              ? "Preparing your dashboard session…"
-              : "Sign in with passwordless email OTP."}
+            {step === "email" && "Sign in with a secure one-time passcode sent to your email."}
+            {step === "otp" && `Enter the 6-digit code sent to ${email}`}
+            {step === "success" && "Authentication verified successfully!"}
           </p>
         </div>
 
-        {successMsg && <p className="form-success" role="status">{successMsg}</p>}
-        {(error || configError) && <p className="form-error" role="alert">{error || configError}</p>}
+        {(error || configError) && (
+          <div className="form-error" role="alert">
+            {error || configError}
+          </div>
+        )}
+
+        {successMsg && !error && (
+          <div className="form-success" role="status" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <CheckCircle2 size={16} />
+            <span>{successMsg}</span>
+          </div>
+        )}
 
         {step === "email" && (
           <form className="auth-form" onSubmit={handleSendOtp}>
@@ -182,17 +193,16 @@ export default function LoginPage() {
                   className="form-control"
                   type="email"
                   autoComplete="email"
-                  placeholder="name@university.edu"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
+                  placeholder="student@example.edu"
                   required
                   disabled={busy}
-                  style={{ paddingLeft: "34px" }}
+                  style={{ paddingLeft: "36px" }}
                 />
                 <Mail
                   size={16}
-                  style={{ position: "absolute", left: "11px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted, #738879)", pointerEvents: "none" }}
-                  aria-hidden="true"
+                  style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted, #738879)" }}
                 />
               </div>
             </label>
@@ -277,7 +287,7 @@ export default function LoginPage() {
         )}
 
         <p className="auth-switch">
-          New to AVSAR? <Link href="/signup">Create an account</Link>
+          New to AVSAR? <Link href={returnTo !== "/dashboard" ? `/signup?next=${encodeURIComponent(returnTo)}` : "/signup"}>Create an account</Link>
         </p>
       </section>
     </main>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, Bookmark, CalendarDays, MapPin, Wallet, BriefcaseBusiness, GraduationCap, Trophy, FlaskConical, Handshake, Laptop, Gift, Landmark, Lightbulb, Rocket } from "lucide-react";
+import { ArrowUpRight, Bookmark, BookmarkCheck, LoaderCircle, CalendarDays, MapPin, Wallet, BriefcaseBusiness, GraduationCap, Trophy, FlaskConical, Handshake, Laptop, Gift, Landmark, Lightbulb, Rocket } from "lucide-react";
 import TrustBadge from "@/components/TrustBadge";
 import { CATEGORY_LABELS } from "@/utils/constants";
 
@@ -16,7 +16,7 @@ const categoryIcons = {
   startup_challenge: Rocket, grant: Gift, research: FlaskConical,
 };
 
-export default function OpportunityCard({ opportunity, saved = false, onSave, matchScore }) {
+export default function OpportunityCard({ opportunity, saved = false, saving = false, onSave, matchScore }) {
   const category = String(opportunity.category || "other").toLowerCase();
   const Icon = categoryIcons[category] || BriefcaseBusiness;
   const organization = opportunity.organization || opportunity.provider || "Organization not listed";
@@ -27,7 +27,7 @@ export default function OpportunityCard({ opportunity, saved = false, onSave, ma
       <div className="card-topline">
         <span className={`card-category-icon ${category}`}><Icon size={19} aria-hidden="true" /></span>
         <span className="category-label">{CATEGORY_LABELS[category] || category.replaceAll("_", " ")}</span>
-        {onSave && <button className={`bookmark-button ${saved ? "active" : ""}`} type="button" onClick={() => onSave(opportunity)} aria-label={saved ? `${opportunity.title} is saved in applications` : `Save ${opportunity.title}`} aria-pressed={saved} disabled={saved}><Bookmark size={17} fill={saved ? "currentColor" : "none"} aria-hidden="true" /></button>}
+        {onSave && <button className={`bookmark-button ${saved ? "active" : ""}`} type="button" onClick={() => onSave(opportunity)} aria-label={saved ? `${opportunity.title} is saved in applications` : saving ? `Saving ${opportunity.title}` : `Save ${opportunity.title}`} title={saved ? "Saved to your applications" : "Save opportunity"} aria-pressed={saved} disabled={saved || saving}>{saving ? <LoaderCircle className="spin" size={17} aria-hidden="true" /> : saved ? <BookmarkCheck size={17} aria-hidden="true" /> : <Bookmark size={17} aria-hidden="true" />}</button>}
       </div>
       <h3 className="opportunity-title">{opportunity.title || "Untitled opportunity"}</h3>
       <p className="organization-name">{organization}</p>

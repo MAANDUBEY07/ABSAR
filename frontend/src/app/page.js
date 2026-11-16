@@ -11,6 +11,9 @@ import { CATEGORY_LABELS, OPPORTUNITY_CATEGORIES } from "@/utils/constants";
 import { api } from "@/services/api";
 import { useAuth } from "@/hooks/useAuth";
 import ThemeToggle from "@/components/ThemeToggle";
+import BrandLogo from "@/components/BrandLogo";
+import DemoNotice from "@/components/DemoNotice";
+import { demoOpportunities } from "@/utils/demo-data";
 
 const featuredCategories = [
   { title: "Scholarships", category: "scholarship", Icon: GraduationCap, tone: "peach" },
@@ -97,17 +100,18 @@ const formatDate = (value) => {
 
 export default function LandingPage() {
   const { user, loading: authLoading } = useAuth();
-  const [featured, setFeatured] = useState([]);
+  const [featured, setFeatured] = useState(demoOpportunities);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [isDemo, setIsDemo] = useState(true);
 
   useEffect(() => {
     if (authLoading) return undefined;
     if (!user) { setLoading(false); return undefined; }
     let active = true;
     api.opportunities({ limit: 4, offset: 0 })
-      .then((result) => { if (active) setFeatured(Array.isArray(result.items) ? result.items : []); })
-      .catch((error) => { if (active) setLoadError(error.message); })
+      .then((result) => { if (active) { setFeatured(Array.isArray(result.items) ? result.items : []); setIsDemo(false); } })
+      .catch((error) => { if (active) { setLoadError(error.message); setIsDemo(true); } })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [authLoading, user]);
@@ -116,8 +120,8 @@ export default function LandingPage() {
     <div className="public-site">
       <header className="public-header">
         <Link href="/" className="public-brand" aria-label="AVSAR home">
-          <span className="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M12 3h10l16 27-5 8H22L6 11z"/><path d="M12 3 6 11h18l-5 8H2m16 0 9 15m-9-15h18"/></svg></span>
-          <span className="brand-name">avsar</span><span className="brand-divider"/><span className="brand-tagline">The Student Opportunity Platform</span>
+          <BrandLogo className="brand-mark" size={58} priority />
+          <span className="brand-divider"/><span className="brand-tagline">The Student Opportunity Platform</span>
         </Link>
         <nav className="public-nav" aria-label="Main navigation">
           <a href="#categories">Explore</a><a href="#features">Features</a><a href="#how-it-works">How it works</a><a href="#about">About</a>
@@ -168,10 +172,11 @@ export default function LandingPage() {
 
         <section className="landing-opportunities content-wrap" id="opportunities">
           <div className="showcase-heading"><div><span className="section-kicker">DISCOVER WHAT’S OPEN</span><h2>Opportunities worth a look</h2></div><Link href="/opportunities" className="showcase-link">Explore opportunities <ArrowRight size={17} /></Link></div>
-          {loadError && <div className="inline-message error" role="alert">{loadError}</div>}
-          {loading && user ? <div className="opportunity-grid">{[0,1,2,3].map((n) => <div className="opportunity-card" key={n}><p>Loading opportunities…</p></div>)}</div> : user && featured.length ? <div className="opportunity-grid">
+          {isDemo && <DemoNotice>{loadError ? "Live listings could not be reached; explore these fictional examples." : "Explore a few fictional listings while you preview AVSAR."}</DemoNotice>}
+          {!isDemo && loading && <p className="form-feedback" role="status">Refreshing live listings…</p>}
+          {featured.length ? <div className="opportunity-grid">
             {featured.map((item) => <article className="opportunity-card" key={item.id}><div className="card-topline"><span className="card-category-icon"><GraduationCap size={19} /></span><span className="category-label">{CATEGORY_LABELS[item.category] || item.category}</span></div><h3 className="opportunity-title">{item.title}</h3><p className="organization-name">{item.organization || item.provider || "Organization not listed"}</p><div className="opportunity-meta"><span>{item.remote === true ? "Online" : item.remote === false ? "On-site" : "Mode not listed"}</span><span>{formatDate(item.deadline)}</span></div><div className="card-footer"><span className="deadline-label">{item.stipend == null ? "Details on source page" : `${item.stipend} stipend`}</span><Link className="text-link" href={`/opportunities/${encodeURIComponent(item.id)}`}>View details <ArrowUpRight size={15} /></Link></div></article>)}
-          </div> : <div className="opportunities-prompt"><span className="prompt-icon"><BookmarkCheck size={22} /></span><div><strong>{user ? "No opportunities available yet" : "Sign in to see opportunities for you"}</strong><p>{user ? "New listings will appear here as they become available." : "Create your profile to explore listings, check eligibility and save deadlines."}</p></div><Link href={user ? "/opportunities" : "/signup"} className="text-link">{user ? "Browse all opportunities" : "Get started"} <ArrowRight size={15} /></Link></div>}
+          </div> : <div className="opportunities-prompt"><span className="prompt-icon"><BookmarkCheck size={22} /></span><div><strong>{user ? "No opportunities available yet" : "Sign in to save opportunities"}</strong><p>{user ? "New listings will appear here as they become available." : "Create your profile to save listings, check eligibility and track deadlines."}</p></div><Link href={user ? "/opportunities" : "/signup"} className="text-link">{user ? "Browse all opportunities" : "Get started"} <ArrowRight size={15} /></Link></div>}
           <p className="listing-note">Opportunity details come from the AVSAR backend. Confirm requirements with the original source before applying.</p>
         </section>
 
@@ -191,7 +196,7 @@ export default function LandingPage() {
           </div>
         </section>
       </main>
-      <footer className="public-footer content-wrap"><Link href="/" className="footer-logo">avsar</Link><span>The Student Opportunity Platform</span><span className="footer-disclaimer">Always confirm requirements with the original source.</span></footer>
+      <footer className="public-footer content-wrap"><Link href="/" className="footer-logo" aria-label="AVSAR home"><BrandLogo size={43} /></Link><span>The Student Opportunity Platform</span><span className="footer-disclaimer">Always confirm requirements with the original source.</span></footer>
     </div>
   );
 }
