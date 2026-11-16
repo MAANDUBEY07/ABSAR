@@ -19,7 +19,8 @@ Base URL: `/api/v1`
 ## 2. Opportunities & Discovery (`/api/v1/opportunities`, `/api/v1/discovery`)
 
 - **GET `/api/v1/opportunities`**
-  - Query parameters: `category`, `state`, `search`, `page`, `limit`
+  - Query parameters: `category`, `state`, `search`, `opportunity_mode`, `offset`, `limit`.
+  - Filters combine before pagination. `state` is a case-insensitive partial location match. `opportunity_mode` accepts `online`, `offline`, or `hybrid`; records with unknown modes are excluded when a mode is selected. Live listings use this endpoint; recommendations remain a separate personalized workflow.
   - Returns paginated list of active opportunities.
 - **GET `/api/v1/opportunities/{id}`**
   - Returns detailed opportunity specifications and criteria.

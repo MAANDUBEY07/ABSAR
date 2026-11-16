@@ -7,6 +7,7 @@ from app.services.catalog import opportunity, create_opportunity
 from app.services import arbeitnow, category_sources
 from pymongo.errors import PyMongoError
 from sqlalchemy.exc import SQLAlchemyError
+from typing import Literal
 
 router = APIRouter()
 
@@ -40,6 +41,7 @@ def list_opportunities(
     category: str | None = None,
     state: str | None = None,
     search: str | None = Query(None, max_length=300),
+    opportunity_mode: Literal["online", "offline", "hybrid"] | None = None,
 ):
     if category == "coding_challenge":
         category = "coding_competition"
@@ -72,7 +74,12 @@ def list_opportunities(
     for record in candidates:
         if category and record.get("category") != category:
             continue
-        if state and str(record.get("location") or "").casefold() != state.casefold():
+        if state and state.strip().casefold() not in str(record.get("location") or "").casefold():
+            continue
+        record_mode = record.get("opportunity_mode")
+        if record_mode is None and record.get("remote") is True:
+            record_mode = "online"
+        if opportunity_mode and record_mode != opportunity_mode:
             continue
         if (
             search
