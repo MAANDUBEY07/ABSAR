@@ -23,7 +23,6 @@ import EligibilityBadge from "@/components/EligibilityBadge";
 import TrustBadge from "@/components/TrustBadge";
 import { api } from "@/services/api";
 import { CATEGORY_LABELS } from "@/utils/constants";
-import DemoNotice from "@/components/DemoNotice";
 import { demoOpportunities } from "@/utils/demo-data";
 
 function dateLabel(value) {
@@ -138,11 +137,6 @@ export default function OpportunityDetailPage() {
       <Link className="back-link" href="/opportunities">
         ← Back to opportunities
       </Link>
-      {isDemo && opportunity && (
-        <DemoNotice>
-          This fictional listing is display-only. Saving, eligibility checks and source checks require a live listing.
-        </DemoNotice>
-      )}
       {loading ? (
         <Loading label="Loading opportunity" />
       ) : error && !opportunity ? (

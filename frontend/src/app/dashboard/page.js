@@ -10,7 +10,6 @@ import Loading from "@/components/Loading";
 import { api } from "@/services/api";
 import { APPLICATION_STATUS_LABELS } from "@/utils/constants";
 import { useAuth } from "@/hooks/useAuth";
-import DemoNotice from "@/components/DemoNotice";
 import { demoDashboard } from "@/utils/demo-data";
 
 function completion(profile) {
@@ -77,9 +76,8 @@ export default function DashboardPage() {
 
   return <ProtectedWorkspace>
     <div className="page-heading"><div><span className="eyebrow">YOUR WORKSPACE</span><h1>Welcome{data?.profile?.name ? `, ${data.profile.name}` : user?.email ? `, ${user.email.split("@")[0]}` : " back"}</h1><p>Your applications, deadlines and opportunity recommendations in one place.</p></div><div className="dashboard-heading-actions"><button className="button button-secondary" type="button" onClick={load} disabled={loading}><RefreshCw size={15} /> Refresh</button><Link className="button button-primary" href="/opportunities">Explore opportunities <ArrowRight size={15} /></Link></div></div>
-    {isDemo && <DemoNotice>{error ? "Live dashboard services could not be reached; this sample workspace is read-only." : "Sample workspace data is shown while AVSAR connects to your services."}</DemoNotice>}
     {error && <div className="inline-message error dashboard-error" role="alert"><span>Some dashboard information could not be loaded: {error}</span><button className="button button-secondary" type="button" onClick={load} disabled={loading}>Retry</button></div>}
-    {loading && !isDemo ? <Loading label="Loading your dashboard" /> : <>
+    {loading && !data ? <Loading label="Loading your dashboard" /> : <>
       <section className="stats-grid" aria-label="Dashboard statistics">
         <article className="stat-card"><span className="stat-icon"><BookmarkCheck /></span><div><small>Saved opportunities</small><strong>{saved}</strong><span>In your application tracker</span></div></article>
         <article className="stat-card"><span className="stat-icon peach"><FileText /></span><div><small>In preparation</small><strong>{preparing}</strong><span>Applications being prepared</span></div></article>

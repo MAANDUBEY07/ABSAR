@@ -16,8 +16,6 @@ import ProtectedWorkspace from "@/components/ProtectedWorkspace";
 import Loading from "@/components/Loading";
 import ResumeUploader from "@/components/ResumeUploader";
 import { api } from "@/services/api";
-import DemoNotice from "@/components/DemoNotice";
-import { demoOpportunities } from "@/utils/demo-data";
 
 export default function ResumePage() {
   const [busy, setBusy] = useState(false);
@@ -26,11 +24,10 @@ export default function ResumePage() {
   const [jobStatus, setJobStatus] = useState("");
   const [analysis, setAnalysis] = useState(null);
   const [documentId, setDocumentId] = useState("");
-  const [opportunities, setOpportunities] = useState(demoOpportunities);
+  const [opportunities, setOpportunities] = useState([]);
   const [selectedOpportunity, setSelectedOpportunity] = useState("");
   const [comparison, setComparison] = useState(null);
   const [comparing, setComparing] = useState(false);
-  const [isDemo, setIsDemo] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -39,12 +36,9 @@ export default function ResumePage() {
       .then((result) => {
         if (active) {
           setOpportunities(Array.isArray(result.items) ? result.items : []);
-          setIsDemo(false);
         }
       })
-      .catch(() => {
-        if (active) setIsDemo(true);
-      });
+      .catch(() => {});
 
     api
       .latestResume()
@@ -111,8 +105,8 @@ export default function ResumePage() {
     if (!selectedOpportunity || !documentId) return;
     setError("");
     setComparing(true);
-    if (isDemo || selectedOpportunity.startsWith("demo-")) {
-      setError("Resume comparison requires a live opportunity. Refresh the listings after the opportunity service is available.");
+    if (selectedOpportunity.startsWith("demo-")) {
+      setError("Resume comparison requires a live opportunity.");
       setComparing(false);
       return;
     }
@@ -146,11 +140,6 @@ export default function ResumePage() {
           <p>Extract skill claims from a resume and compare them with an opportunity’s requirements.</p>
         </div>
       </div>
-      {isDemo && (
-        <DemoNotice>
-          The sample opportunity options and skill example are previews. Resume comparisons require a live opportunity and are not simulated.
-        </DemoNotice>
-      )}
       {error && <div className="inline-message error" role="alert">{error}</div>}
       {notice && <div className="inline-message" role="status">{notice}</div>}
       <div className="resume-layout">
@@ -352,7 +341,7 @@ export default function ResumePage() {
                   className="button button-secondary"
                   type="button"
                   onClick={compare}
-                  disabled={!selectedOpportunity || comparing || isDemo || selectedOpportunity.startsWith("demo-")}
+                  disabled={!selectedOpportunity || comparing || selectedOpportunity.startsWith("demo-")}
                 >
                   {comparing ? "Comparing…" : "Compare skills"}
                 </button>
