@@ -150,6 +150,11 @@ def _load(category):
                 "Devpost",
                 "Submission period: " + row.get("submission_period_dates", "Check source"),
                 location=row.get("displayed_location", {}).get("location"),
+                opportunity_mode=(
+                    "online"
+                    if row.get("displayed_location", {}).get("location", "").casefold() == "online"
+                    else None
+                ),
             )
             for row in payload["hackathons"]
             if row.get("open_state") == "open"
