@@ -52,6 +52,14 @@ def evaluate_opportunity(profile, opportunity):
                     value=list(normalized(requirements["required_skills"])),
                 )
             )
+        if requirements.get("languages"):
+            criteria.append(
+                Criterion(
+                    field="languages",
+                    operator=Operator.ANY_OF,
+                    value=list(normalized(requirements["languages"])),
+                )
+            )
     candidate = eligibility_profile(profile)
     for field in (
         "graduation_year",
@@ -66,6 +74,16 @@ def evaluate_opportunity(profile, opportunity):
             candidate[field] = str(candidate[field]).casefold()
     if candidate.get("skills") is not None:
         candidate["skills"] = list(normalized(candidate["skills"]))
+    if candidate.get("languages") is not None:
+        raw_langs = candidate["languages"]
+        if isinstance(raw_langs, list):
+            norm_langs = []
+            for item in raw_langs:
+                if isinstance(item, dict) and "language" in item:
+                    norm_langs.append(str(item["language"]).casefold())
+                elif isinstance(item, str):
+                    norm_langs.append(item.casefold())
+            candidate["languages"] = norm_langs
     result = EligibilityEngine().evaluate(
         candidate, Scheme(id=opportunity["id"], title=opportunity["title"], criteria=criteria)
     )
@@ -80,4 +98,17 @@ def evaluate_opportunity(profile, opportunity):
             reasons=[],
             has_missing_opportunity_criteria=False,
         )
+    elif not requirements.get("confirmed"):
+        payload.update(
+            status="CANNOT_DETERMINE",
+            api_status="CANNOT_DETERMINE",
+            is_eligible=False,
+            score=0.0,
+            summary="Eligibility criteria could not be confirmed by the source. Please review the original listing or provide requirement text for evaluation.",
+            reasons=["Eligibility criteria have not been confirmed by the source."],
+            has_missing_opportunity_criteria=True,
+        )
+    payload["source_summary"] = opportunity.get("source_summary")
+    payload["requirements"] = requirements
+    payload["evidence"] = requirements.get("evidence")
     return EligibilityEvaluationResponse.model_validate(payload).model_dump(mode="json")

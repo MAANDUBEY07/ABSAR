@@ -56,7 +56,9 @@ class Requirements(Input):
     locations: list[str] = Field(default_factory=list)
     required_skills: list[str] = Field(default_factory=list)
     preferred_skills: list[str] = Field(default_factory=list)
+    languages: list[str] = Field(default_factory=list)
     min_experience_months: int | None = Field(None, ge=0)
+    evidence: dict[str, JsonValue] | None = None
 
 
 class OpportunityInput(Input):
@@ -80,6 +82,7 @@ class OpportunityInput(Input):
     remote: bool | None = None
     domain: str | None = None
     requirements: Requirements = Field(default_factory=Requirements)
+    source_summary: dict[str, JsonValue] | None = None
 
     @field_validator("category", mode="before")
     @classmethod
