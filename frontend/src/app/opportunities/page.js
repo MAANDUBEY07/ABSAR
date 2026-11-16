@@ -10,6 +10,7 @@ import { api } from "@/services/api";
 import { CATEGORY_LABELS, OPPORTUNITY_CATEGORIES } from "@/utils/constants";
 import DemoNotice from "@/components/DemoNotice";
 import { demoOpportunities } from "@/utils/demo-data";
+import { opportunityMode } from "@/utils/opportunity-mode.mjs";
 
 const PAGE_SIZE = 20;
 
@@ -68,7 +69,7 @@ export default function OpportunitiesPage() {
       const demoRows = demoOpportunities.filter((item) =>
         (!category || item.category === category)
         && (!location || String(item.location || "").toLowerCase().includes(location.toLowerCase()))
-        && (!mode || (item.opportunity_mode || (item.remote === true ? "online" : null)) === mode)
+        && (!mode || opportunityMode(item) === mode)
         && (!search || `${item.title} ${item.organization} ${item.description}`.toLowerCase().includes(search.toLowerCase()))
       );
       const start = page * PAGE_SIZE;

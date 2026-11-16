@@ -22,6 +22,7 @@ import Loading from "@/components/Loading";
 import EligibilityBadge from "@/components/EligibilityBadge";
 import TrustBadge from "@/components/TrustBadge";
 import { api } from "@/services/api";
+import { opportunityModeLabel } from "@/utils/opportunity-mode.mjs";
 import { CATEGORY_LABELS } from "@/utils/constants";
 import DemoNotice from "@/components/DemoNotice";
 import { demoOpportunities } from "@/utils/demo-data";
@@ -176,11 +177,7 @@ export default function OpportunityDetailPage() {
                     <MapPin size={15} /> {opportunity.location || "Location not specified"}
                   </span>
                   <span>
-                    {opportunity.remote === true
-                      ? "Online"
-                      : opportunity.remote === false
-                      ? "On-site"
-                      : "Mode not specified"}
+                    {opportunityModeLabel(opportunity)}
                   </span>
                 </div>
                 <section className="detail-section">

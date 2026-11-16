@@ -54,6 +54,28 @@ def _normalize(item: object, retrieved_at: str) -> dict | None:
     )
     remote_value = item.get("remote")
     remote = remote_value if isinstance(remote_value, bool) else None
+    mode = item.get("opportunity_mode")
+    if mode not in {"online", "offline", "hybrid"}:
+        # Only exact source labels describe a work arrangement. A title such as
+        # "Hybrid Cloud Engineer" is a skill/domain, not evidence of hybrid work.
+        mode_labels = {
+            "remote": "online",
+            "online": "online",
+            "fully remote": "online",
+            "on-site": "offline",
+            "onsite": "offline",
+            "on site": "offline",
+            "in-person": "offline",
+            "hybrid": "hybrid",
+        }
+        signals = {
+            mode_labels[tag.strip().casefold()]
+            for tag in tags
+            if tag.strip().casefold() in mode_labels
+        }
+        mode = next(iter(signals)) if len(signals) == 1 else None
+        if not signals and remote is True:
+            mode = "online"
     slug = item.get("slug")
     provider_id = _plain_text(slug, 200) if isinstance(slug, str) else listing_url
     published = item.get("created_at") or item.get("date")
@@ -62,7 +84,7 @@ def _normalize(item: object, retrieved_at: str) -> dict | None:
         "id": "arbeitnow_" + hashlib.sha256(provider_id.encode()).hexdigest()[:32],
         "title": title,
         "category": category,
-        "opportunity_mode": "online" if remote is True else None,
+        "opportunity_mode": mode,
         "category_metadata": {"provider": SOURCE_NAME, "tags": tags},
         "description": _plain_text(item.get("description")),
         "organization": _plain_text(item.get("company_name"), 300) or None,

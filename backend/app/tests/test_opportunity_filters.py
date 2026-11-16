@@ -60,6 +60,19 @@ def test_online_category_location_and_search_combine(listings, headers):
     assert [r["id"] for r in response.json()["data"]] == ["online"]
 
 
+def test_any_mode_includes_all_arrangements_and_unknown(listings, headers):
+    response = listings.get(
+        "/api/v1/opportunities", headers=headers(), params={"category": "coding_competition"}
+    )
+    assert response.status_code == 200
+    assert {row["id"] for row in response.json()["data"]} == {
+        "online",
+        "offline",
+        "hybrid",
+        "unknown",
+    }
+
+
 @pytest.mark.parametrize(
     "mode,expected", [("online", "online"), ("offline", "offline"), ("hybrid", "hybrid")]
 )
