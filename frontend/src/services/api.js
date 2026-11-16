@@ -141,6 +141,7 @@ export const api = {
   },
   job: (id) => request(`/jobs/${encodeURIComponent(id)}`),
   skillProgress: () => request("/skills/progress"),
+  latestResume: () => request("/resume/latest"),
   compareSkills: (opportunityId) => request("/skills/compare", { method: "POST", body: { opportunity_id: opportunityId } }),
   matchResume: (opportunityId, documentId) => request(`/resume/match/${encodeURIComponent(opportunityId)}`, { method: "POST", body: { document_id: documentId } }),
 };

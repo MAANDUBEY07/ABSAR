@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     mongodb_database: str = "opportunityos"
     redis_url: str = "redis://localhost:6379/0"
     jobs_eager: bool = True
+    job_dispatch_mode: Literal["in_process", "celery"] = "celery"
     postgres_startup_diagnostics: bool = False
     career_checkpoint_db: str = "career-checkpoints.sqlite"
     aws_enabled: bool = False
@@ -80,11 +81,16 @@ class Settings(BaseSettings):
         ):
             raise ValueError("Cognito pool, client and region are required")
         if self.hosted:
+            # Single-service hosted architectures (e.g. single Render web service) execute jobs
+            # in-process via Starlette BackgroundTasks (job_dispatch_mode="in_process").
+            # Limitation: in-process BackgroundTasks run in the web container and may be interrupted
+            # by container restarts; this execution model is non-durable compared to detached Celery workers.
+            # Multi-service hosted architectures using Celery workers require jobs_eager=False.
             if (
                 self.auth_provider == "local"
                 or not self.database_url.startswith("postgresql")
                 or not self.mongodb_uri.startswith(("mongodb://", "mongodb+srv://"))
-                or self.jobs_eager
+                or (self.job_dispatch_mode == "celery" and self.jobs_eager)
                 or self.demo_mode
                 or not self.require_human_approval
                 or not self.redis_url.startswith(("redis://", "rediss://"))

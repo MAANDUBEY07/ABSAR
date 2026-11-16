@@ -122,7 +122,23 @@ export default function LandingPage() {
         <nav className="public-nav" aria-label="Main navigation">
           <a href="#categories">Explore</a><a href="#features">Features</a><a href="#how-it-works">How it works</a><a href="#about">About</a>
         </nav>
-        <div className="public-actions"><ThemeToggle /><Link href="/login" className="header-login">Log in</Link><Link href="/signup" className="header-cta">Get started <ArrowRight size={16} /></Link></div>
+        <div className="public-actions">
+          <ThemeToggle />
+          {user ? (
+            <Link href="/dashboard" className="header-cta">
+              Dashboard <ArrowRight size={16} />
+            </Link>
+          ) : (
+            <>
+              <Link href="/login" className="header-login">
+                Log in
+              </Link>
+              <Link href="/signup" className="header-cta">
+                Get started <ArrowRight size={16} />
+              </Link>
+            </>
+          )}
+        </div>
       </header>
 
       <main>
@@ -161,7 +177,19 @@ export default function LandingPage() {
 
         <section className="how-section-new" id="how-it-works"><div className="content-wrap how-section-inner"><div className="how-intro"><span className="section-kicker">A CLEARER WAY FORWARD</span><h2>From discovery<br />to <span>your next step.</span></h2><p>AVSAR brings the details together so you can focus on opportunities that fit your goals.</p></div><div className="how-step-grid">{steps.map(([number, title, text]) => <article className="how-step-new" key={number}><span className="how-step-icon">{number}</span><div><b>{number} · {title.toUpperCase()}</b><h3>{title} opportunities</h3><p>{text}</p></div></article>)}</div></div></section>
 
-        <section className="landing-about content-wrap" id="about"><div><span className="section-kicker">YOUR OPPORTUNITY DESK</span><h2>Find the opportunity.<br /><span>Make it count.</span></h2><p>One place to discover, understand and keep track of the next step in your journey.</p></div><div className="about-actions"><Link href="/signup" className="hero-primary">Create your profile <ArrowRight size={17} /></Link><Link href="/opportunities" className="text-link">Browse opportunities <ArrowUpRight size={15} /></Link></div></section>
+        <section className="landing-about content-wrap" id="about">
+          <div>
+            <span className="section-kicker">YOUR OPPORTUNITY DESK</span>
+            <h2>Find the opportunity.<br /><span>Make it count.</span></h2>
+            <p>One place to discover, understand and keep track of the next step in your journey.</p>
+          </div>
+          <div className="about-actions">
+            <Link href={user ? "/profile" : "/signup"} className="hero-primary">
+              {user ? "Update your profile" : "Create your profile"} <ArrowRight size={17} />
+            </Link>
+            <Link href="/opportunities" className="text-link">Browse opportunities <ArrowUpRight size={15} /></Link>
+          </div>
+        </section>
       </main>
       <footer className="public-footer content-wrap"><Link href="/" className="footer-logo">avsar</Link><span>The Student Opportunity Platform</span><span className="footer-disclaimer">Always confirm requirements with the original source.</span></footer>
     </div>

@@ -10,10 +10,10 @@ import { APPLICATION_STATUS_LABELS, BACKEND_APPLICATION_TRANSITIONS } from "@/ut
 
 const transitionLabel = {
   DRAFT: "PREPARING",
-  READY_FOR_REVIEW: "PREPARING Â· ready for review",
-  ASSESSMENT: "APPLIED Â· assessment",
-  INTERVIEW: "SHORTLISTED Â· interview",
-  OFFER: "SELECTED Â· offer",
+  READY_FOR_REVIEW: "PREPARING · ready for review",
+  ASSESSMENT: "APPLIED · assessment",
+  INTERVIEW: "SHORTLISTED · interview",
+  OFFER: "SELECTED · offer",
   REJECTED: "REJECTED",
 };
 

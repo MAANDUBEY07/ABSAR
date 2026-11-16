@@ -23,8 +23,29 @@ export default function ResumePage() {
   const [comparing, setComparing] = useState(false);
 
   useEffect(() => {
-    api.opportunities({ limit: 100, offset: 0 }).then((result) => setOpportunities(Array.isArray(result.items) ? result.items : [])).catch(() => {});
-  }, []);
+    let active = true;
+    api
+      .opportunities({ limit: 100, offset: 0 })
+      .then((result) => {
+        if (active) setOpportunities(Array.isArray(result.items) ? result.items : []);
+      })
+      .catch(() => {});
+
+    api
+      .latestResume()
+      .then((saved) => {
+        if (!active) return;
+        if (saved && !busy) {
+          setAnalysis((current) => current || saved);
+          setDocumentId((current) => current || saved.document_id || saved.id || "");
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, [busy]);
 
   async function upload(file) {
     setError(""); setNotice(""); setAnalysis(null); setComparison(null);

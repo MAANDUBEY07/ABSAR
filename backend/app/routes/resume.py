@@ -63,6 +63,15 @@ def progress(owner: Owner):
     return ok([dict(id=r["id"], skills=r["skills"]) for r in records])
 
 
+@router.get("/resume/latest")
+def latest_resume(owner: Owner):
+    records = documents.scan("skill_analysis", limit=50, owner=owner)
+    if not records:
+        return ok(None)
+    latest = max(records, key=lambda r: (str(r.get("_updated_at") or ""), str(r.get("id") or "")))
+    return ok(latest)
+
+
 @router.post("/resume/match/{opportunity_id}")
 def match_resume(opportunity_id: str, body: ResumeMatchInput, owner: Owner):
     analysis = documents.get("skill_analysis", body.document_id, owner)

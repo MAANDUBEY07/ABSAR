@@ -57,7 +57,43 @@ async def lifespan(app):
         except Exception:  # nosec B110
             # Even diagnostic import, cleanup or logging failures must not block startup.
             pass
+
+    recovery_task = None
+    if settings.job_dispatch_mode == "in_process":
+        async def _background_recovery_loop():
+            # Initial non-blocking check shortly after startup
+            try:
+                await asyncio.sleep(2)
+                from app.services.jobs import recover, dispatch
+                await asyncio.to_thread(recover)
+                await asyncio.to_thread(dispatch)
+            except asyncio.CancelledError:
+                return
+            except Exception:
+                pass
+
+            # Periodic sweep every 60 seconds
+            while True:
+                try:
+                    await asyncio.sleep(60)
+                    from app.services.jobs import recover, dispatch
+                    await asyncio.to_thread(recover)
+                    await asyncio.to_thread(dispatch)
+                except asyncio.CancelledError:
+                    break
+                except Exception:
+                    pass
+
+        recovery_task = asyncio.create_task(_background_recovery_loop())
+
     yield
+
+    if recovery_task:
+        recovery_task.cancel()
+        try:
+            await recovery_task
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(
@@ -152,7 +188,11 @@ async def security(request: Request, call_next):
         request._body = bytes(data)
         response = await call_next(request)
         response.headers["X-Request-ID"] = request.state.request_id
-        if settings.jobs_eager and request.method == "POST" and response.status_code == 202:
+        if (
+            (settings.jobs_eager or settings.job_dispatch_mode == "in_process")
+            and request.method == "POST"
+            and response.status_code == 202
+        ):
             from starlette.background import BackgroundTask
             from app.services.jobs import dispatch
 

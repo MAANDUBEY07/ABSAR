@@ -1,10 +1,15 @@
 """MongoDB hosted; durable SQL document table locally. No cross-store transaction."""
 
+import logging
+from pymongo.errors import PyMongoError
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from app.config import settings
 from app.config.database import Session, mongo_client
 from app.models.runtime import LocalDocument
+from app.models.base import now
+
+logger = logging.getLogger(__name__)
 
 COLLECTIONS = (
     "opportunities",
@@ -21,14 +26,7 @@ COLLECTIONS = (
 client = mongo_client
 
 
-def put(collection, record_id, payload, insert_only=False):
-    document = dict(payload, id=record_id)
-    if client:
-        col = client[settings.mongodb_database][collection]
-        col.update_one(
-            {"_id": record_id}, {"$setOnInsert" if insert_only else "$set": document}, upsert=True
-        )
-        return get(collection, record_id)
+def _put_sql(collection, record_id, document, insert_only=False):
     try:
         with Session.begin() as db:
             existing = db.get(LocalDocument, (collection, record_id))
@@ -40,21 +38,99 @@ def put(collection, record_id, payload, insert_only=False):
                 return existing.payload
     except IntegrityError:
         if insert_only:
-            return get(collection, record_id)
+            return _get_sql(collection, record_id)
         raise
     return document
 
 
-def get(collection, record_id, owner=None):
-    if client:
-        query = {"_id": record_id}
+def _get_sql(collection, record_id, owner=None):
+    with Session() as db:
+        row = db.get(LocalDocument, (collection, record_id))
+        result = row.payload if row else None
+    if result and owner is not None and result.get("owner_id") != owner:
+        return None
+    return result
+
+
+def _scan_sql(collection, limit=501, owner=None):
+    with Session() as db:
+        query = select(LocalDocument).where(LocalDocument.collection == collection)
         if owner is not None:
-            query["owner_id"] = owner
-        result = client[settings.mongodb_database][collection].find_one(query, {"_id": 0})
+            query = query.where(LocalDocument.payload["owner_id"].as_string() == owner)
+        return [r.payload for r in db.scalars(query.order_by(LocalDocument.id).limit(limit))]
+
+
+def put(collection, record_id, payload, insert_only=False):
+    document = dict(payload, id=record_id)
+    if "_updated_at" not in document:
+        document["_updated_at"] = now().isoformat()
+    mongo_ok = False
+    if client:
+        try:
+            col = client[settings.mongodb_database][collection]
+            col.update_one(
+                {"_id": record_id}, {"$setOnInsert" if insert_only else "$set": document}, upsert=True
+            )
+            mongo_ok = True
+        except PyMongoError as err:
+            logger.warning(
+                "MongoDB write failed for %s/%s: %s; falling back to PostgreSQL",
+                collection,
+                record_id,
+                err,
+            )
+
+    if not mongo_ok:
+        # Fall back to PostgreSQL LocalDocument. If PostgreSQL also fails, exception bubbles up.
+        return _put_sql(collection, record_id, document, insert_only)
+
+    return get(collection, record_id)
+
+
+def get(collection, record_id, owner=None):
+    mongo_doc = None
+    mongo_failed = False
+    if client:
+        try:
+            query = {"_id": record_id}
+            if owner is not None:
+                query["owner_id"] = owner
+            mongo_doc = client[settings.mongodb_database][collection].find_one(query, {"_id": 0})
+        except PyMongoError as err:
+            mongo_failed = True
+            logger.warning(
+                "MongoDB read failed for %s/%s: %s; falling back to PostgreSQL",
+                collection,
+                record_id,
+                err,
+            )
+
+    sql_doc = _get_sql(collection, record_id, owner)
+
+    if mongo_doc and sql_doc:
+        mongo_time = str(mongo_doc.get("_updated_at") or "")
+        sql_time = str(sql_doc.get("_updated_at") or "")
+        if sql_time > mongo_time:
+            # PostgreSQL contains a newer fallback record. Sync forward to MongoDB.
+            result = sql_doc
+            try:
+                col = client[settings.mongodb_database][collection]
+                col.update_one({"_id": record_id}, {"$set": sql_doc}, upsert=True)
+            except PyMongoError:
+                pass
+        else:
+            result = mongo_doc
+    elif sql_doc:
+        result = sql_doc
+        if client and not mongo_failed:
+            try:
+                col = client[settings.mongodb_database][collection]
+                col.update_one({"_id": record_id}, {"$set": sql_doc}, upsert=True)
+            except PyMongoError:
+                pass
     else:
-        with Session() as db:
-            row = db.get(LocalDocument, (collection, record_id))
-            result = row.payload if row else None
+        result = mongo_doc
+
     if result and owner is not None and result.get("owner_id") != owner:
         return None
     if result and collection == "opportunities":
@@ -65,19 +141,34 @@ def get(collection, record_id, owner=None):
 
 
 def _scan(collection, limit=501, owner=None):
+    mongo_results = None
     if client:
-        query = {"owner_id": owner} if owner is not None else {}
-        return list(
-            client[settings.mongodb_database][collection]
-            .find(query, {"_id": 0})
-            .sort("_id", 1)
-            .limit(limit)
-        )
-    with Session() as db:
-        query = select(LocalDocument).where(LocalDocument.collection == collection)
-        if owner is not None:
-            query = query.where(LocalDocument.payload["owner_id"].as_string() == owner)
-        return [r.payload for r in db.scalars(query.order_by(LocalDocument.id).limit(limit))]
+        try:
+            query = {"owner_id": owner} if owner is not None else {}
+            mongo_results = list(
+                client[settings.mongodb_database][collection]
+                .find(query, {"_id": 0})
+                .sort("_id", 1)
+                .limit(limit)
+            )
+        except PyMongoError as err:
+            logger.warning("MongoDB scan failed for %s: %s; falling back to PostgreSQL", collection, err)
+
+    sql_results = _scan_sql(collection, limit, owner)
+    if mongo_results is None:
+        return sql_results
+
+    if not sql_results:
+        return mongo_results
+
+    merged = {doc["id"]: doc for doc in mongo_results if "id" in doc}
+    for sdoc in sql_results:
+        sid = sdoc.get("id")
+        if not sid:
+            continue
+        if sid not in merged or str(sdoc.get("_updated_at") or "") > str(merged[sid].get("_updated_at") or ""):
+            merged[sid] = sdoc
+    return list(merged.values())[:limit]
 
 
 def indexes():
@@ -90,11 +181,19 @@ def indexes():
 def transition(collection, record_id, owner, expected_statuses, changes):
     """Update an owned document only while its current state permits the transition."""
     if client:
-        result = client[settings.mongodb_database][collection].update_one(
-            {"_id": record_id, "owner_id": owner, "status": {"$in": list(expected_statuses)}},
-            {"$set": changes},
-        )
-        return result.matched_count == 1
+        try:
+            result = client[settings.mongodb_database][collection].update_one(
+                {"_id": record_id, "owner_id": owner, "status": {"$in": list(expected_statuses)}},
+                {"$set": changes},
+            )
+            return result.matched_count == 1
+        except PyMongoError as err:
+            logger.warning(
+                "MongoDB transition failed for %s/%s: %s; falling back to PostgreSQL",
+                collection,
+                record_id,
+                err,
+            )
     # Optimistic full-payload comparison prevents lost updates in the SQL fallback.
     with Session.begin() as db:
         row = db.get(LocalDocument, (collection, record_id))

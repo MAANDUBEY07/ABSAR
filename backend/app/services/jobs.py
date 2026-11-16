@@ -1,6 +1,7 @@
 """SQL job state/outbox, leased execution, bounded retries and stale recovery."""
 
 from datetime import timedelta
+import time
 from sqlalchemy import or_, select, update
 from sqlalchemy.exc import IntegrityError
 from app.config import settings
@@ -10,6 +11,8 @@ from app.models.runtime import Outbox
 from app.models.base import now
 from app.models.base import uid
 from app.services.catalog import digest
+
+_last_recovery_at = 0.0
 
 
 def enqueue(db, owner, kind, arguments, dedupe=None):
@@ -52,19 +55,43 @@ def enqueue(db, owner, kind, arguments, dedupe=None):
 
 
 def dispatch():
-    if not settings.jobs_eager:
+    if not settings.jobs_eager and settings.job_dispatch_mode == "celery":
         from app.worker import execute_job
+
+    if settings.job_dispatch_mode == "in_process":
+        global _last_recovery_at
+        current_time = time.time()
+        if current_time - _last_recovery_at >= 15.0:
+            _last_recovery_at = current_time
+            try:
+                recover()
+            except Exception as recovery_err:
+                import logging
+                logging.getLogger("opportunityos").warning(
+                    "Automatic recovery check failed during dispatch: %s", recovery_err
+                )
 
     with Session() as db:
         # Dispatch may happen more than once. execute() claims by atomic status/lease predicate.
         events = list(db.scalars(select(Outbox).where(Outbox.status == "PENDING").limit(100)))
         for event in events:
-            if settings.jobs_eager:
-                execute(event.payload["job_id"])
-            else:
-                execute_job.delay(event.payload["job_id"])
-            event.status = "SENT"
-            db.commit()
+            try:
+                if settings.jobs_eager or settings.job_dispatch_mode == "in_process":
+                    execute(event.payload["job_id"])
+                else:
+                    execute_job.delay(event.payload["job_id"])
+                event.status = "SENT"
+                db.commit()
+            except Exception as dispatch_err:
+                db.rollback()
+                import logging
+                logging.getLogger("opportunityos").error(
+                    "Outbox dispatch failed for event_id=%s job_id=%s: %s",
+                    event.id,
+                    event.payload.get("job_id"),
+                    dispatch_err,
+                )
+                raise
 
 
 def execute(job_id):
