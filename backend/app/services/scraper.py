@@ -41,6 +41,96 @@ CANONICAL_CATEGORIES = {
 
 DEFAULT_USER_AGENT = "AVSAR-OpportunityDiscovery/1.0 (+https://avsar.gov.in/bot)"
 
+# ---------------------------------------------------------------------------
+# Opportunity Validation & Content Quality Gate
+# ---------------------------------------------------------------------------
+
+REJECTED_TITLE_PATTERNS = {
+    "patron",
+    "chief patron",
+    "advisory board",
+    "organizing committee",
+    "steering committee",
+    "dignitaries",
+    "navigation",
+    "menu",
+    "home",
+    "about us",
+    "contact us",
+    "login",
+    "student login",
+    "institute login",
+    "register",
+    "privacy policy",
+    "terms of service",
+    "disclaimer",
+    "header",
+    "footer",
+    "copyright",
+    "announcements",
+    "all rights reserved",
+    "students",
+    "institute",
+    "establishment",
+    "search",
+    "sitemap",
+    "faq",
+    "faqs",
+    "help videos",
+    "raise a query",
+    "raise a grievance",
+    "public dashboard",
+    "boat login",
+    "ministry login",
+    "csc login",
+}
+
+
+def is_valid_opportunity(
+    title: str | None,
+    description: str | None = None,
+    source_url: str | None = None,
+    category: str | None = None,
+    min_title_length: int = 6,
+) -> bool:
+    """
+    Validates whether extracted data represents a genuine opportunity.
+    Rejects site navigation, administrative roles, dignitary cards, and empty placeholders.
+    """
+    if not title or not isinstance(title, str):
+        return False
+    title_clean = title.strip()
+    if len(title_clean) < min_title_length:
+        return False
+
+    norm_lower = title_clean.lower()
+    if norm_lower in REJECTED_TITLE_PATTERNS:
+        return False
+    for rej in REJECTED_TITLE_PATTERNS:
+        if (
+            norm_lower == rej
+            or norm_lower.startswith(f"{rej}:")
+            or norm_lower.startswith(f"{rej} -")
+            or norm_lower.startswith(f"{rej} |")
+        ):
+            return False
+
+    if not re.search(r"[a-zA-Z]", title_clean):
+        return False
+
+    if category and category not in CANONICAL_CATEGORIES:
+        return False
+
+    if source_url and not (
+        source_url.startswith("http://") or source_url.startswith("https://")
+    ):
+        return False
+
+    if description is not None and len(description.strip()) < 5:
+        return False
+
+    return True
+
 
 # ---------------------------------------------------------------------------
 # Data Models
@@ -204,7 +294,7 @@ class SourceRegistry:
             SourceMetadata(
                 source_id="nsp_portal",
                 name="National Scholarship Portal",
-                base_url="https://scholarships.gov.in",
+                base_url="https://scholarships.gov.in/All-Scholarships",
                 supported_categories=["scholarship", "government_scheme"],
                 collection_method="HTML",
                 trust_classification="VERIFIED",
@@ -234,7 +324,7 @@ class SourceRegistry:
             SourceMetadata(
                 source_id="devpost_hackathons",
                 name="Devpost Public Hackathons",
-                base_url="https://devpost.com",
+                base_url="https://devpost.com/hackathons",
                 supported_categories=["hackathon", "coding_competition"],
                 collection_method="HTML",
                 trust_classification="UNVERIFIED",
@@ -244,7 +334,7 @@ class SourceRegistry:
             SourceMetadata(
                 source_id="ugc_fellowships",
                 name="UGC Fellowships and Research Grants",
-                base_url="https://www.ugc.gov.in",
+                base_url="https://www.ugc.gov.in/notices",
                 supported_categories=["fellowship", "grant"],
                 collection_method="HTML",
                 trust_classification="VERIFIED",
@@ -295,17 +385,21 @@ class SourceRegistry:
 def parse_scraped_date(raw_date_str: str | None) -> str | None:
     """
     Extracts and standardizes dates from scraped HTML text across various formats:
-    - Numeric: DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD
+    - Numeric: DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD (including ISO timestamps like YYYY-MM-DDTHH:MM:SS)
     - Textual: 15 Oct 2026, 15th October 2026, October 15, 2026
     """
     if not raw_date_str:
         return None
     raw = raw_date_str.strip()
 
-    # 1. Standard ISO or DD/MM/YYYY
-    m = re.search(r"\b(\d{1,2}[/-]\d{1,2}[/-]\d{4}|\d{4}-\d{2}-\d{2})\b", raw)
-    if m:
-        return m.group(1)
+    # 1. Standard ISO (including ISO 8601 timestamps like 2026-12-01T...) or DD/MM/YYYY
+    m_iso = re.search(r"(\d{4}-\d{2}-\d{2})", raw)
+    if m_iso:
+        return m_iso.group(1)
+
+    m_numeric = re.search(r"\b(\d{1,2}[/-]\d{1,2}[/-]\d{4})\b", raw)
+    if m_numeric:
+        return m_numeric.group(1)
 
     # 2. Textual dates: "15 Oct 2026" or "15th October 2026"
     m2 = re.search(
@@ -401,12 +495,63 @@ class NationalScholarshipAdapter(BaseSourceAdapter):
         soup = BeautifulSoup(html_content, "html.parser")
         opportunities: list[ScrapedOpportunity] = []
 
-        # Find scheme/scholarship cards or table rows
+        # 1. Check for live NSP accordion structure (from /All-Scholarships)
+        accordion_collapses = soup.select(".accordion-collapse")
+        if accordion_collapses:
+            for acc in accordion_collapses:
+                parent = acc.find_parent(class_="accordion-item")
+                ministry = "Ministry of Education / Government of India"
+                if parent:
+                    btn = parent.find("button")
+                    if btn:
+                        ministry = btn.get_text(strip=True)
+
+                for row in acc.select(".accordion-body .row"):
+                    h6 = row.find("h6")
+                    if not h6:
+                        continue
+                    title = h6.get_text(strip=True)
+                    if not is_valid_opportunity(title, source_url=page_url, category="scholarship"):
+                        continue
+
+                    deadline = None
+                    for span in row.find_all("span"):
+                        txt = span.get_text(strip=True)
+                        if "open till" in txt.lower():
+                            m = re.search(r"\d{1,2}-\d{1,2}-\d{4}", txt)
+                            if m:
+                                deadline = parse_scraped_date(m.group(0))
+                                break
+
+                    desc = f"Government scholarship scheme under {ministry}: {title}"
+                    opp_id = self.generate_opportunity_id(page_url, title)
+                    category = "scholarship" if "scholarship" in title.lower() else "government_scheme"
+
+                    opportunities.append(
+                        ScrapedOpportunity(
+                            id=opp_id,
+                            title=title,
+                            category=category,
+                            organization=ministry,
+                            description=desc,
+                            source_url=page_url,
+                            application_url=page_url,
+                            deadline=deadline,
+                            location="India",
+                            opportunity_mode="online",
+                            source_name=self.metadata.name,
+                            trust_status="VERIFIED",
+                        )
+                    )
+
+            if opportunities:
+                return opportunities
+
+        # 2. Existing card and table selectors (for offline tests & general feeds)
         items = soup.select(
             ".scheme-item, .scholarship-card, .scheme-row, tr.scheme-data, div.scheme"
         )
         if not items:
-            # Fallback to general cards or article tags
             items = soup.select("article, .card, .post-item")
 
         for item in items:
@@ -415,7 +560,7 @@ class NationalScholarshipAdapter(BaseSourceAdapter):
                 continue
 
             title = title_tag.get_text(strip=True)
-            if not title or len(title) < 5:
+            if not is_valid_opportunity(title, source_url=page_url, category="scholarship"):
                 continue
 
             # Extract application / detail link
@@ -472,15 +617,13 @@ class NATSApprenticeshipAdapter(BaseSourceAdapter):
         opportunities: list[ScrapedOpportunity] = []
 
         items = soup.select(".vacancy-card, .apprenticeship-item, tr.vacancy, .job-card")
-        if not items:
-            items = soup.select("article, .card, div.list-item")
 
         for item in items:
             title_tag = item.select_one("h2, h3, h4, .vacancy-title, .title")
             if not title_tag:
                 continue
             title = title_tag.get_text(strip=True)
-            if not title:
+            if not is_valid_opportunity(title, source_url=page_url, category="apprenticeship"):
                 continue
 
             link_tag = item.select_one("a[href]")
@@ -530,9 +673,74 @@ class DevpostHackathonAdapter(BaseSourceAdapter):
     """Adapter for Hackathons and Coding Competitions."""
 
     def parse_html(self, html_content: str, page_url: str) -> list[ScrapedOpportunity]:
+        import json
+
         soup = BeautifulSoup(html_content, "html.parser")
         opportunities: list[ScrapedOpportunity] = []
 
+        # 1. Try application/ld+json ItemList (live Devpost structured data)
+        for script in soup.find_all("script", type="application/ld+json"):
+            try:
+                data = json.loads(script.text)
+                if data.get("@type") == "ItemList" and "itemListElement" in data:
+                    for el in data["itemListElement"]:
+                        item = el.get("item", {})
+                        title = item.get("name")
+                        if not is_valid_opportunity(title, source_url=page_url, category="hackathon"):
+                            continue
+
+                        app_url = item.get("url") or page_url
+                        desc = item.get("description") or f"Hackathon: {title}"
+                        org = item.get("organizer", {}).get("name", "Tech Community / Organizer")
+                        raw_deadline = item.get("endDate")
+                        deadline = parse_scraped_date(raw_deadline)
+
+                        mode = "online"
+                        att_mode = str(item.get("eventAttendanceMode", ""))
+                        if "Offline" in att_mode:
+                            mode = "offline"
+                        elif "Mixed" in att_mode:
+                            mode = "hybrid"
+
+                        prize = None
+                        for prop in item.get("additionalProperty", []):
+                            if prop.get("name") == "Total prize pool":
+                                prize = f"{prop.get('value')} {prop.get('unitText', '')}".strip()
+
+                        category = "hackathon"
+                        if re.search(r"\bcompetition|contest|challenge\b", title, re.IGNORECASE):
+                            category = "coding_competition"
+
+                        opp_id = self.generate_opportunity_id(app_url, title)
+                        metadata = {}
+                        if prize:
+                            metadata["prize_pool"] = prize
+
+                        opportunities.append(
+                            ScrapedOpportunity(
+                                id=opp_id,
+                                title=title,
+                                category=category,
+                                organization=org,
+                                description=desc,
+                                source_url=page_url,
+                                application_url=item.get("offers", {}).get("url") or app_url,
+                                deadline=deadline,
+                                location="Online" if mode == "online" else None,
+                                opportunity_mode=mode,
+                                stipend_or_benefit=prize,
+                                source_name=self.metadata.name,
+                                trust_status="UNVERIFIED",
+                                category_metadata=metadata,
+                            )
+                        )
+            except Exception:
+                pass
+
+        if opportunities:
+            return opportunities
+
+        # 2. Existing card and tile selectors (for offline tests & static feeds)
         items = soup.select(
             ".hackathon-tile, .challenge-listing, .opportunity-tile, article.hackathon"
         )
@@ -544,7 +752,7 @@ class DevpostHackathonAdapter(BaseSourceAdapter):
             if not title_tag:
                 continue
             title = title_tag.get_text(strip=True)
-            if not title or len(title) < 3:
+            if not is_valid_opportunity(title, source_url=page_url, category="hackathon"):
                 continue
 
             link_tag = item.select_one("a[href]")
@@ -605,25 +813,27 @@ class SmartIndiaHackathonAdapter(BaseSourceAdapter):
 
         items = soup.select(".problem-statement, .challenge-card, tr.problem-row, .ps-item")
         if not items:
-            items = soup.select("article, .card, tr.data-row")
+            # Check for data table rows (avoiding headers and generic dignitary cards)
+            items = soup.select("table#dataTablePS tbody tr, tr.data-row")
 
         for item in items:
-            title_tag = item.select_one("h2, h3, h4, .title, .ps-title, strong")
+            title_tag = item.select_one("h2, h3, h4, .title, .ps-title, strong, td:nth-child(3)")
             if not title_tag:
                 continue
             title = title_tag.get_text(strip=True)
-            if not title or len(title) < 5:
+            # Rigorous validation: rejects "Patron", navigation, administrative cards
+            if not is_valid_opportunity(title, source_url=page_url, category="innovation_challenge"):
                 continue
 
             link_tag = item.select_one("a[href]")
             app_url = urljoin(page_url, link_tag["href"]) if link_tag else page_url
 
-            org_tag = item.select_one(".ministry, .department, .org, .organization")
+            org_tag = item.select_one(".ministry, .department, .org, .organization, td:nth-child(2)")
             org = (
                 org_tag.get_text(strip=True) if org_tag else "Ministry of Education Innovation Cell"
             )
 
-            domain_tag = item.select_one(".bucket, .domain, .category, .theme")
+            domain_tag = item.select_one(".bucket, .domain, .category, .theme, td:nth-child(7)")
             domain = domain_tag.get_text(strip=True) if domain_tag else "Hardware / Software"
 
             deadline_tag = item.select_one(".deadline, .last-date, .date")
@@ -665,15 +875,13 @@ class UGCNoticeAdapter(BaseSourceAdapter):
         opportunities: list[ScrapedOpportunity] = []
 
         items = soup.select(".notice-item, tr.circular-row, .circular-item, .fellowship-card")
-        if not items:
-            items = soup.select("article, tr, .card")
 
         for item in items:
             title_tag = item.select_one("h2, h3, h4, .title, a[href]")
             if not title_tag:
                 continue
             title = title_tag.get_text(strip=True)
-            if not title or len(title) < 8:
+            if not is_valid_opportunity(title, source_url=page_url, category="fellowship"):
                 continue
 
             link_tag = item.select_one("a[href]")

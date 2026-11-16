@@ -24,6 +24,7 @@ from app.services.scraper import (
     SourceMetadata,
     SourceRegistry,
     UGCNoticeAdapter,
+    is_valid_opportunity,
     parse_scraped_date,
 )
 
@@ -305,6 +306,114 @@ class TestScraperService(unittest.TestCase):
         self.assertEqual(opps[0].deadline, "30 Nov 2026")
         self.assertEqual(opps[1].category, "grant")
         self.assertEqual(opps[1].deadline, "15/12/2026")
+
+    def test_sih_adapter_rejects_patron_dignitary_card(self):
+        """SIH adapter must reject non-opportunity cards like 'Patron' and return 0 opportunities."""
+        meta = SourceMetadata(
+            source_id="sih_challenges",
+            name="Smart India Hackathon",
+            base_url="https://sih.gov.in",
+            supported_categories=["innovation_challenge"],
+        )
+        adapter = SmartIndiaHackathonAdapter(meta)
+        html = """
+        <div class="card">
+            <h3>Patron</h3>
+            <p>Hon'ble Patron and Advisory Committee</p>
+        </div>
+        """
+        opps = adapter.parse_html(html, "https://www.sih.gov.in")
+        self.assertEqual(len(opps), 0)
+
+    def test_quality_gate_rejects_navigation_and_administrative_elements(self):
+        """Quality gate must reject navigation, login, boilerplate, and junk phrases."""
+        self.assertFalse(is_valid_opportunity("Patron"))
+        self.assertFalse(is_valid_opportunity("Chief Patron"))
+        self.assertFalse(is_valid_opportunity("Student Login"))
+        self.assertFalse(is_valid_opportunity("Home"))
+        self.assertFalse(is_valid_opportunity("Navigation"))
+        self.assertFalse(is_valid_opportunity("Privacy Policy"))
+        self.assertFalse(is_valid_opportunity("123456"))
+        self.assertFalse(is_valid_opportunity(""))
+        # Valid opportunity titles
+        self.assertTrue(is_valid_opportunity("Post Matric Scholarship for SC Students"))
+        self.assertTrue(is_valid_opportunity("AI Climate Innovation Challenge 2026"))
+
+    def test_devpost_jsonld_parsing(self):
+        """Verify Devpost adapter correctly extracts from Schema.org ItemList JSON-LD."""
+        meta = SourceMetadata(
+            source_id="devpost_hackathons",
+            name="Devpost",
+            base_url="https://devpost.com/hackathons",
+            supported_categories=["hackathon"],
+        )
+        adapter = DevpostHackathonAdapter(meta)
+        html = """
+        <html>
+        <head>
+        <script type="application/ld+json">
+        {
+          "@context": "http://schema.org",
+          "@type": "ItemList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "item": {
+                "name": "Global AI Frontier Hackathon 2026",
+                "description": "Build cutting-edge generative AI models for open science.",
+                "url": "https://globalai.devpost.com/",
+                "organizer": {"@type": "Organization", "name": "AI Frontier Labs"},
+                "endDate": "2026-12-01T23:59:00Z",
+                "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode",
+                "offers": {"url": "https://globalai.devpost.com/register"},
+                "additionalProperty": [{"name": "Total prize pool", "value": "10000", "unitText": "USD"}]
+              }
+            }
+          ]
+        }
+        </script>
+        </head>
+        <body></body>
+        </html>
+        """
+        opps = adapter.parse_html(html, "https://devpost.com/hackathons")
+        self.assertEqual(len(opps), 1)
+        self.assertEqual(opps[0].title, "Global AI Frontier Hackathon 2026")
+        self.assertEqual(opps[0].organization, "AI Frontier Labs")
+        self.assertEqual(opps[0].deadline, "2026-12-01")
+        self.assertEqual(opps[0].opportunity_mode, "online")
+        self.assertEqual(opps[0].stipend_or_benefit, "10000 USD")
+        self.assertEqual(opps[0].application_url, "https://globalai.devpost.com/register")
+
+    def test_nsp_accordion_parsing(self):
+        """Verify NSP adapter correctly extracts from live /All-Scholarships accordion structure."""
+        meta = SourceMetadata(
+            source_id="nsp_portal",
+            name="National Scholarship Portal",
+            base_url="https://scholarships.gov.in/All-Scholarships",
+            supported_categories=["scholarship"],
+        )
+        adapter = NationalScholarshipAdapter(meta)
+        html = """
+        <div class="accordion-item">
+            <h2><button class="accordion-button">Department of Higher Education</button></h2>
+            <div class="accordion-collapse collapse">
+                <div class="accordion-body">
+                    <div class="row">
+                        <h6>PM-USP Central Sector Scheme of Scholarship for College Students</h6>
+                        <span>Student Application Open till : 30-11-2026</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        """
+        opps = adapter.parse_html(html, "https://scholarships.gov.in/All-Scholarships")
+        self.assertEqual(len(opps), 1)
+        self.assertEqual(opps[0].title, "PM-USP Central Sector Scheme of Scholarship for College Students")
+        self.assertEqual(opps[0].organization, "Department of Higher Education")
+        self.assertEqual(opps[0].deadline, "30-11-2026")
+        self.assertEqual(opps[0].category, "scholarship")
+        self.assertEqual(opps[0].trust_status, "VERIFIED")
 
 
 if __name__ == "__main__":
