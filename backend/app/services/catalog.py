@@ -81,6 +81,23 @@ def create_opportunity(data):
 
 def opportunity(record_id):
     record = documents.get("opportunities", record_id)
+    if not record and record_id.startswith("live_"):
+        from app.services import category_sources
+
+        live = category_sources.get_listing(record_id)
+        if live:
+            record = documents.put("opportunities", record_id, live, insert_only=True)
+    if not record and record_id.startswith("arbeitnow_"):
+        from app.services import arbeitnow
+
+        try:
+            live = arbeitnow.get_listing(record_id)
+        except (OSError, ValueError):
+            live = None
+        if live:
+            # Materialize one listing when a workflow needs it, never every
+            # listing on a search page before the HTTP response can be sent.
+            record = documents.put("opportunities", record_id, live, insert_only=True)
     if not record:
         raise HTTPException(404, "Opportunity not found")
     return record

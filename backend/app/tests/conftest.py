@@ -29,6 +29,7 @@ def client(monkeypatch):
     # Existing API tests exercise seeded catalog fixtures, never a changing
     # external provider. Live-source behavior has separate adapter coverage.
     monkeypatch.setattr("app.services.arbeitnow.listings", lambda: [])
+    monkeypatch.setattr("app.services.category_sources.listings", lambda category: [])
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     local_rates.clear()

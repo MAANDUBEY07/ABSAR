@@ -4,7 +4,7 @@ from app.repositories import documents
 from fastapi import Query
 from app.schemas.opportunity import OpportunityInput
 from app.services.catalog import opportunity, create_opportunity
-from app.services import arbeitnow
+from app.services import arbeitnow, category_sources
 from pymongo.errors import PyMongoError
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -18,6 +18,10 @@ def insert_opportunity(body: OpportunityInput, owner: Owner):
 
 @router.get("/opportunities/{record_id}")
 def get_opportunity(record_id: str, owner: Owner):
+    if record_id.startswith("live_"):
+        live = category_sources.get_listing(record_id)
+        if live:
+            return ok(live)
     if record_id.startswith("arbeitnow_"):
         try:
             live = arbeitnow.get_listing(record_id)
@@ -50,7 +54,11 @@ def list_opportunities(
 
     live_source_available = True
     try:
-        live_candidates = arbeitnow.listings()
+        live_candidates = (
+            category_sources.listings(category)
+            if category in category_sources.CATEGORIES
+            else arbeitnow.listings()
+        )
     except (OSError, ValueError):
         live_candidates = []
         live_source_available = False
@@ -76,24 +84,13 @@ def list_opportunities(
             continue
         result.append(record)
     page_items = result[offset : offset + limit]
-    if database_available:
-        # Persist only the page the student actually requested. This is an
-        # idempotent cache fill, allowing existing detail/save flows to find
-        # live source records without writing the entire provider feed per GET.
-        for record in page_items:
-            if record.get("source_attribution") == "Arbeitnow":
-                try:
-                    documents.put("opportunities", record["id"], record, insert_only=True)
-                except (PyMongoError, SQLAlchemyError):
-                    database_available = False
-                    break
     return ok(
         page_items,
         limit=limit,
         offset=offset,
         scanned=len(candidates),
         truncated=len(candidates) > 500,
-        live_source="Arbeitnow" if live_source_available else None,
+        live_source=(live_candidates[0].get("source_attribution") if live_candidates else None),
         database_available=database_available,
         live_source_available=live_source_available,
     )
