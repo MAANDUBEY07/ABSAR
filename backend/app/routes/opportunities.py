@@ -76,17 +76,6 @@ def list_opportunities(
             continue
         result.append(record)
     page_items = result[offset : offset + limit]
-    if database_available:
-        # Persist only the page the student actually requested. This is an
-        # idempotent cache fill, allowing existing detail/save flows to find
-        # live source records without writing the entire provider feed per GET.
-        for record in page_items:
-            if record.get("source_attribution") == "Arbeitnow":
-                try:
-                    documents.put("opportunities", record["id"], record, insert_only=True)
-                except (PyMongoError, SQLAlchemyError):
-                    database_available = False
-                    break
     return ok(
         page_items,
         limit=limit,

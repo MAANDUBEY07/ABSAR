@@ -42,6 +42,30 @@ def test_live_listing_can_be_saved(client, headers, monkeypatch):
     assert saved.json()["data"]["status"] == "SAVED"
 
 
+def test_listing_page_does_not_write_each_provider_record(client, headers, monkeypatch):
+    from app.repositories import documents
+
+    row = arbeitnow._normalize(
+        {
+            "title": "Student internship",
+            "slug": "read-only",
+            "url": "https://www.arbeitnow.com/jobs/read-only",
+        },
+        "2026-11-16T00:00:00Z",
+    )
+    monkeypatch.setattr(
+        arbeitnow, "listings", lambda: [dict(row, id=f"arbeitnow_{n}") for n in range(20)]
+    )
+
+    def unexpected_write(*args, **kwargs):
+        pytest.fail("Listing GET must not synchronously persist provider records")
+
+    monkeypatch.setattr(documents, "put", unexpected_write)
+    response = client.get("/api/v1/opportunities?limit=20", headers=headers())
+    assert response.status_code == 200
+    assert len(response.json()["data"]) == 20
+
+
 def test_provider_outage_keeps_existing_catalog_available(client, headers, monkeypatch):
     def unavailable():
         raise OSError("provider unavailable")
