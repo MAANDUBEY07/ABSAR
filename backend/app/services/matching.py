@@ -14,19 +14,50 @@ def is_open(opportunity):
     )
 
 
-def compare_skills(skills, requirements):
+def compare_skills(skills, requirements=None, *, opportunity=None):
+    if requirements is None and isinstance(opportunity, dict):
+        requirements = opportunity.get("requirements", {})
+    elif isinstance(requirements, dict) and (
+        "category_metadata" in requirements or "title" in requirements
+    ):
+        opportunity = requirements
+        requirements = opportunity.get("requirements", {})
+
+    requirements = requirements or {}
     actual = normalized(skills)
-    required, preferred = (
-        normalized(requirements.get("required_skills")),
-        normalized(requirements.get("preferred_skills")),
-    )
+    required = normalized(requirements.get("required_skills"))
+    preferred = normalized(requirements.get("preferred_skills"))
+
+    # Fallback to opportunity metadata if required_skills is empty/unconfirmed
+    if not required and opportunity:
+        tags = opportunity.get("category_metadata", {}).get("tags", [])
+        if isinstance(tags, list):
+            norm_tags = normalized([t for t in tags if isinstance(t, str)])
+            if norm_tags:
+                required = norm_tags
+
+        if not required:
+            from app.services.resume_analyzer import extract_skills
+
+            text_context = f"{opportunity.get('title', '')} {opportunity.get('description', '')}"
+            extracted_opp_skills = normalized(extract_skills(text_context))
+            if extracted_opp_skills:
+                required = extracted_opp_skills
+
+    criteria_available = bool(required or preferred)
+    has_missing_opportunity_criteria = not criteria_available
+
+    score = None
+    if required and skills is not None:
+        score = 100.0 * len(actual & required) / len(required)
+
     return {
         "matched_required": sorted(actual & required),
         "missing_required": sorted(required - actual),
         "missing_preferred": sorted(preferred - actual),
-        "score": 100 * len(actual & required) / len(required)
-        if required and skills is not None
-        else None,
+        "score": round(score, 1) if score is not None else None,
+        "criteria_available": criteria_available,
+        "has_missing_opportunity_criteria": has_missing_opportunity_criteria,
     }
 
 

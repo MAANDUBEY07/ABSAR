@@ -258,6 +258,130 @@ class TestResumeAnalyzerService(unittest.TestCase):
         self.assertEqual(validated_kw.document_id, "doc_kw_101")
         self.assertIn("python", validated_kw.skills)
 
+    def test_michael_adams_resume_accuracy_extraction(self):
+        """Regression test for Michael Adams resume:
+
+        Verifies accurate experience calculation (capped at current year, future dated flagged),
+        proper degree, institution, and GPA extraction, separation of soft skills from technical skills,
+        language extraction, and readiness breakdown without extra="forbid" schema violations.
+        """
+        fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "michael_adams_resume.pdf")
+        if os.path.exists(fixture_path):
+            with open(fixture_path, "rb") as f:
+                pdf_bytes = f.read()
+            from app.services.resume_analyzer import extract_text_from_pdf_bytes
+            resume_text = extract_text_from_pdf_bytes(pdf_bytes)
+        else:
+            resume_text = (
+                "MICHAEL ADAMS\nGRAPHIC DESIGNER\n"
+                "WORK EXPERIENCE\n"
+                "2030 - PRESENT\nBorcelle Studio\nMarketing Manager & Specialist\n"
+                "2025 - 2029\nFauget Studio\nMarketing Manager & Specialist\n"
+                "2024 - 2025\nStudio Shodwe\nMarketing Manager & Specialist\n"
+                "Lead, mentor, and manage a high-performing marketing team, promoting teamwork.\n"
+                "EDUCATION\n"
+                "WARDIERE UNIVERSITY\nMaster of Business Management\n2029 - 2030\n"
+                "WARDIERE UNIVERSITY\nBachelor of Business\n2025 - 2029\nGPA: 3.8 / 4.0\n"
+                "SKILLS\n"
+                "Project Management\nPublic Relations\nTeamwork\nTime Management\n"
+                "Leadership\nEffective Communication\nCritical Thinking\n"
+                "LANGUAGES\n"
+                "English (Fluent)\nFrench (Fluent)\nGerman (Basics)\nSpanish (Intermediate)\n"
+                "CONTACT\n+123-456-7890\nhello@reallygreatsite.com\n123 Anywhere St."
+            )
+
+        result = analyze_resume(resume_text, owner_id="usr_michael", document_id="doc_adams")
+
+        # 1. Experience years: must be capped at 2.0 completed years, NOT 19.5!
+        self.assertEqual(result.experience_years, 2.0)
+        self.assertTrue(
+            any("Future-dated" in w for w in result.get("warnings", [])),
+            "Expected warning for 2030 - PRESENT future employment entry",
+        )
+
+        # 2. Education: Master of Business Management and Bachelor of Business with Wardiere University & GPA
+        self.assertEqual(len(result.education), 2)
+        degrees = [e["degree"] for e in result.education]
+        self.assertIn("Master of Business Management", degrees)
+        self.assertIn("Bachelor of Business", degrees)
+        for edu in result.education:
+            self.assertEqual(edu["institution"], "Wardiere University")
+        bachelor = next(e for e in result.education if e["degree"] == "Bachelor of Business")
+        self.assertEqual(bachelor["gpa"], "3.8 / 4.0")
+
+        # 3. Soft Skills: All 7 skills identified, not classified as technical
+        expected_soft = {
+            "project management",
+            "public relations",
+            "teamwork",
+            "time management",
+            "leadership",
+            "effective communication",
+            "critical thinking",
+        }
+        self.assertTrue(expected_soft.issubset(set(result.get("soft_skills", []))))
+        self.assertEqual(result.get("technical_skills", []), [])
+
+        # 4. Languages extracted
+        languages = {l["language"]: l["proficiency"] for l in result.get("languages", [])}
+        self.assertEqual(languages.get("English"), "Fluent")
+        self.assertEqual(languages.get("French"), "Fluent")
+        self.assertEqual(languages.get("German"), "Basic")
+        self.assertEqual(languages.get("Spanish"), "Intermediate")
+
+        # 5. Readiness breakdown
+        breakdown = result.get("readiness_breakdown")
+        self.assertIsNotNone(breakdown)
+        self.assertEqual(breakdown["score_type"], "RESUME_COMPLETENESS")
+        self.assertEqual(breakdown["total_score"], 80.0)
+        self.assertEqual(result.readiness_score, 80.0)
+
+        # 6. Strict validation against Member 2 Pydantic schema
+        validated = ResumeAnalysis.model_validate(result)
+        self.assertEqual(validated.owner_id, "usr_michael")
+        self.assertEqual(validated.document_id, "doc_adams")
+
+    def test_opportunity_matching_fallback_and_missing_criteria(self):
+        """Verify opportunity matching falls back to tags/descriptions when requirements
+
+        are unconfirmed, and sets criteria_available=False when no criteria exist.
+        """
+        from app.services.matching import compare_skills
+
+        candidate_skills = [
+            "critical thinking",
+            "effective communication",
+            "leadership",
+            "project management",
+        ]
+
+        # Scenario A: Live job with tags but unconfirmed requirements
+        react_opp = {
+            "id": "live_arbeitnow_frontend",
+            "title": "Senior Frontend Engineer – React",
+            "category_metadata": {"tags": ["React", "JavaScript", "TypeScript"]},
+            "requirements": {"confirmed": False},
+        }
+        match_a = compare_skills(candidate_skills, react_opp.get("requirements"), opportunity=react_opp)
+        self.assertTrue(match_a["criteria_available"])
+        self.assertFalse(match_a["has_missing_opportunity_criteria"])
+        self.assertIn("react", match_a["missing_required"])
+        self.assertIn("javascript", match_a["missing_required"])
+        self.assertEqual(match_a["matched_required"], [])
+        self.assertEqual(match_a["score"], 0.0)
+
+        # Scenario B: Opportunity with no criteria anywhere
+        blank_opp = {
+            "id": "opp_blank",
+            "title": "General Contributor",
+            "description": "General open role",
+            "requirements": {},
+        }
+        match_b = compare_skills(candidate_skills, blank_opp.get("requirements"), opportunity=blank_opp)
+        self.assertFalse(match_b["criteria_available"])
+        self.assertTrue(match_b["has_missing_opportunity_criteria"])
+        self.assertIsNone(match_b["score"])
+
 
 if __name__ == "__main__":
     unittest.main()

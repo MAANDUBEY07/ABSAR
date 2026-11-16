@@ -10,6 +10,7 @@ import {
   GraduationCap,
   Sparkles,
   AlertTriangle,
+  Languages,
 } from "lucide-react";
 import ProtectedWorkspace from "@/components/ProtectedWorkspace";
 import Loading from "@/components/Loading";
@@ -125,7 +126,11 @@ export default function ResumePage() {
   }
 
   const skills = analysis?.parsed_skills || analysis?.skills || analysis?.result?.skills || [];
+  const technicalSkills = Array.isArray(analysis?.technical_skills) ? analysis.technical_skills : [];
+  const softSkills = Array.isArray(analysis?.soft_skills) ? analysis.soft_skills : [];
+  const languages = Array.isArray(analysis?.languages) ? analysis.languages : [];
   const readinessScore = typeof analysis?.readiness_score === "number" ? Math.round(analysis.readiness_score) : null;
+  const readinessBreakdown = analysis?.readiness_breakdown || null;
   const experienceYears = typeof analysis?.experience_years === "number" ? analysis.experience_years : null;
   const education = Array.isArray(analysis?.education) ? analysis.education : [];
   const recommendations = Array.isArray(analysis?.recommendations) ? analysis.recommendations : [];
@@ -188,24 +193,87 @@ export default function ResumePage() {
                 </div>
               </div>
 
-              {/* Skills section */}
+              {/* Readiness Breakdown */}
+              {readinessBreakdown && (
+                <div className="readiness-breakdown-box" style={{ margin: "14px 0", padding: "12px", background: "#f8faf9", borderRadius: "8px", border: "1px solid #e1e8e4" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#2d4d38", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      Profile Completeness Breakdown
+                    </span>
+                    <span style={{ fontSize: "12px", fontWeight: 800, color: "#166534" }}>
+                      {readinessScore}%
+                    </span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "8px", fontSize: "10px", color: "#4b5563" }}>
+                    <div>Contact details: <strong>{readinessBreakdown.contact_score ?? 0} / 10</strong></div>
+                    <div>Education credentials: <strong>{readinessBreakdown.education_score ?? 0} / 25</strong></div>
+                    <div>Experience history: <strong>{readinessBreakdown.experience_score ?? 0} / 25</strong></div>
+                    <div>Technical skills: <strong>{readinessBreakdown.technical_skills_score ?? 0} / 20</strong></div>
+                    <div>Soft skills & languages: <strong>{readinessBreakdown.soft_skills_and_languages_score ?? 0} / 20</strong></div>
+                  </div>
+                  {readinessBreakdown.explanation && (
+                    <p style={{ margin: "8px 0 0", fontSize: "9px", color: "#6b7280", lineHeight: 1.4 }}>
+                      {readinessBreakdown.explanation}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Technical Skills section */}
               <div className="skills-extracted-section">
                 <h3 style={{ margin: "0 0 8px", fontSize: "12px", color: "#355340", fontWeight: 800 }}>
                   Extracted technical skills
                 </h3>
-                {skills.length ? (
+                {technicalSkills.length ? (
                   <div className="skill-tags success-tags">
-                    {skills.map((skill) => (
+                    {technicalSkills.map((skill) => (
                       <span key={skill}>{skill}</span>
                     ))}
                   </div>
                 ) : (
-                  <div className="empty-state compact">
-                    <h3>No supported skill claims detected</h3>
-                    <p>The analyzer uses a limited rule-based vocabulary and may miss relevant skills.</p>
+                  <div className="empty-state compact" style={{ padding: "8px 12px" }}>
+                    <p style={{ margin: 0, fontSize: "10px", color: "#6b7280" }}>
+                      No technical domain tools or programming languages detected on this resume.
+                    </p>
                   </div>
                 )}
               </div>
+
+              {/* Soft Skills section */}
+              <div className="skills-extracted-section" style={{ marginTop: "12px" }}>
+                <h3 style={{ margin: "0 0 8px", fontSize: "12px", color: "#355340", fontWeight: 800 }}>
+                  Soft skills & professional competencies
+                </h3>
+                {softSkills.length ? (
+                  <div className="skill-tags success-tags">
+                    {softSkills.map((skill) => (
+                      <span key={skill}>{skill}</span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty-state compact" style={{ padding: "8px 12px" }}>
+                    <p style={{ margin: 0, fontSize: "10px", color: "#6b7280" }}>
+                      No professional competency claims detected.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Languages section */}
+              {languages.length > 0 && (
+                <div className="languages-extracted-section" style={{ marginTop: "12px" }}>
+                  <h3 style={{ margin: "0 0 8px", fontSize: "12px", color: "#355340", fontWeight: 800, display: "flex", alignItems: "center", gap: "6px" }}>
+                    <Languages size={14} /> Languages & proficiencies
+                  </h3>
+                  <div className="skill-tags">
+                    {languages.map((item, idx) => (
+                      <span key={idx} style={{ background: "#edf5f0", color: "#22593b", borderColor: "#c4e2cd" }}>
+                        <strong>{item.language}</strong> · {item.proficiency}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Education section */}
               {education.length > 0 && (
@@ -223,6 +291,7 @@ export default function ResumePage() {
                           <p>
                             {edu.institution || "Institution not specified"}
                             {edu.graduation_year ? ` · Class of ${edu.graduation_year}` : ""}
+                            {edu.gpa ? ` · GPA: ${edu.gpa}` : ""}
                           </p>
                         </div>
                       </div>
@@ -304,38 +373,47 @@ export default function ResumePage() {
                       </span>
                     )}
                   </div>
-                  <div className="analysis-columns">
-                    <div>
-                      <h3>Required skills matched</h3>
-                      <div className="skill-tags success-tags">
-                        {comparison.matched_required?.length ? (
-                          comparison.matched_required.map((skill) => <span key={skill}>{skill}</span>)
-                        ) : (
-                          <p style={{ fontSize: "9px", color: "#8a968d" }}>None identified</p>
-                        )}
+
+                  {comparison.criteria_available === false ? (
+                    <div className="empty-state compact" style={{ marginTop: "12px", padding: "10px 12px" }}>
+                      <p style={{ margin: 0, fontSize: "10px", color: "#6e7f73" }}>
+                        Skill criteria unavailable for this opportunity: The source listing did not specify required or preferred skills.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="analysis-columns">
+                      <div>
+                        <h3>Required skills matched</h3>
+                        <div className="skill-tags success-tags">
+                          {comparison.matched_required?.length ? (
+                            comparison.matched_required.map((skill) => <span key={skill}>{skill}</span>)
+                          ) : (
+                            <p style={{ fontSize: "9px", color: "#8a968d" }}>None identified</p>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <h3>Required skill gaps</h3>
+                        <div className="skill-tags warning-tags">
+                          {comparison.missing_required?.length ? (
+                            comparison.missing_required.map((skill) => <span key={skill}>{skill}</span>)
+                          ) : (
+                            <p style={{ fontSize: "9px", color: "#8a968d" }}>No required skill gaps identified</p>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <h3>Preferred skills to explore</h3>
+                        <div className="skill-tags">
+                          {comparison.missing_preferred?.length ? (
+                            comparison.missing_preferred.map((skill) => <span key={skill}>{skill}</span>)
+                          ) : (
+                            <p style={{ fontSize: "9px", color: "#8a968d" }}>None identified</p>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <h3>Required skill gaps</h3>
-                      <div className="skill-tags warning-tags">
-                        {comparison.missing_required?.length ? (
-                          comparison.missing_required.map((skill) => <span key={skill}>{skill}</span>)
-                        ) : (
-                          <p style={{ fontSize: "9px", color: "#8a968d" }}>No required skill gaps identified</p>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <h3>Preferred skills to explore</h3>
-                      <div className="skill-tags">
-                        {comparison.missing_preferred?.length ? (
-                          comparison.missing_preferred.map((skill) => <span key={skill}>{skill}</span>)
-                        ) : (
-                          <p style={{ fontSize: "9px", color: "#8a968d" }}>None identified</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               )}
             </section>
