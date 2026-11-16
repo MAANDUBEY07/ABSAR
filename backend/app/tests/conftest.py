@@ -25,7 +25,10 @@ from fastapi.testclient import TestClient
 
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
+    # Existing API tests exercise seeded catalog fixtures, never a changing
+    # external provider. Live-source behavior has separate adapter coverage.
+    monkeypatch.setattr("app.services.arbeitnow.listings", lambda: [])
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     local_rates.clear()
