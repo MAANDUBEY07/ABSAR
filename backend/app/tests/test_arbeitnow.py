@@ -23,6 +23,29 @@ def test_untrusted_source_url_is_rejected():
     assert arbeitnow._normalize({"title": "Job", "url": "https://evil.example/jobs"}, "now") is None
 
 
+@pytest.mark.parametrize(
+    "fields,expected",
+    [
+        ({"tags": ["Hybrid"], "remote": False}, "hybrid"),
+        ({"tags": ["On-site"]}, "offline"),
+        ({"tags": ["Fully remote"]}, "online"),
+        ({"remote": True}, "online"),
+        ({"remote": False}, None),
+        ({"tags": ["Hybrid", "On-site"]}, None),
+        ({"opportunity_mode": "hybrid", "remote": False}, "hybrid"),
+        ({"title": "Hybrid Cloud Engineer", "tags": ["Hybrid Cloud"], "remote": False}, None),
+    ],
+)
+def test_live_provider_mode_signals(fields, expected):
+    row = arbeitnow._normalize(
+        dict(title="Engineer", url="https://www.arbeitnow.com/jobs/engineer", **fields)
+        if "title" not in fields
+        else dict(url="https://www.arbeitnow.com/jobs/engineer", **fields),
+        "2026-11-16T00:00:00Z",
+    )
+    assert row["opportunity_mode"] == expected
+
+
 def test_live_listing_can_be_saved(client, headers, monkeypatch):
     row = arbeitnow._normalize(
         {

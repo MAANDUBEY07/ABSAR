@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, Bookmark, BookmarkCheck, LoaderCircle, CalendarDays, MapPin, Wallet, BriefcaseBusiness, GraduationCap, Trophy, FlaskConical, Handshake, Laptop, Gift, Landmark, Lightbulb, Rocket } from "lucide-react";
 import TrustBadge from "@/components/TrustBadge";
 import { CATEGORY_LABELS } from "@/utils/constants";
+import { opportunityModeLabel } from "@/utils/opportunity-mode.mjs";
 
 function dateLabel(value) {
   if (!value) return "Deadline not provided";
@@ -21,7 +22,7 @@ export default function OpportunityCard({ opportunity, saved = false, saving = f
   const Icon = categoryIcons[category] || BriefcaseBusiness;
   const organization = opportunity.organization || opportunity.provider || "Organization not listed";
   const compensation = opportunity.stipend == null ? "Compensation not listed" : `${opportunity.stipend} stipend`;
-  const mode = opportunity.remote === true ? "Online" : opportunity.remote === false ? "On-site" : "Mode not listed";
+  const mode = opportunityModeLabel(opportunity);
   return (
     <article className="opportunity-card">
       <div className="card-topline">

@@ -37,7 +37,14 @@ def get_opportunity(record_id: str, owner: Owner):
     if not opp:
         opp = opportunity(record_id)
 
-    if opp:
+    # A minimal catalog record has nothing to inspect. Preserve its saved API
+    # representation instead of persisting a synthetic failure on every read.
+    # Explicit refresh still reports source failures for these records.
+    if opp and (
+        opp.get("source_url")
+        or opp.get("application_url")
+        or len((opp.get("description") or "").strip()) > 30
+    ):
         opp = enrich_opportunity(opp)
     return ok(opp)
 

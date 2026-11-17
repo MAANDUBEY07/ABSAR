@@ -8,6 +8,12 @@ import OpportunityCard from "@/components/OpportunityCard";
 import Loading from "@/components/Loading";
 import { api } from "@/services/api";
 import { CATEGORY_LABELS, OPPORTUNITY_CATEGORIES } from "@/utils/constants";
+ backend-branch
+import DemoNotice from "@/components/DemoNotice";
+import { demoOpportunities } from "@/utils/demo-data";
+import { opportunityMode } from "@/utils/opportunity-mode.mjs";
+
+ main
 
 const PAGE_SIZE = 20;
 
@@ -61,8 +67,21 @@ export default function OpportunitiesPage() {
         setHasMore(Array.isArray(following.items) && following.items.length > 0);
     } catch (requestError) {
       if (version !== loadVersion.current) return;
+ backend-branch
+      const demoRows = demoOpportunities.filter((item) =>
+        (!category || item.category === category)
+        && (!location || String(item.location || "").toLowerCase().includes(location.toLowerCase()))
+        && (!mode || opportunityMode(item) === mode)
+        && (!search || `${item.title} ${item.organization} ${item.description}`.toLowerCase().includes(search.toLowerCase()))
+      );
+      const start = page * PAGE_SIZE;
+      setItems(demoRows.slice(start, start + PAGE_SIZE));
+      setHasMore(start + PAGE_SIZE < demoRows.length);
+      setIsDemo(true);
+
       setItems([]);
       setHasMore(false);
+ main
       setError(requestError.message);
     }
     finally { if (version === loadVersion.current) setLoading(false); }
