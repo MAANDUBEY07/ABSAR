@@ -1,6 +1,7 @@
 import { submissionRequest } from "@/services/application-contract.mjs";
 import { getAuthProvider, getStoredLocalToken, resolveAccessToken } from "@/services/auth-token.mjs";
 import { getSupabaseClient } from "@/services/supabase";
+import { refreshAccessToken, fetchWithSessionRecovery } from "@/services/session-refresh.mjs";
 
 export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1").replace(/\/$/, "");
 const REQUEST_TIMEOUT_MS = 15000;
@@ -38,7 +39,8 @@ async function accessToken() {
     if (!client) return null;
     const { data, error } = await client.auth.getSession();
     if (error) throw new ApiError(error.message);
-    return resolveAccessToken(provider, { supabaseSession: data.session });
+    const token = resolveAccessToken(provider, { supabaseSession: data.session });
+    return token || (data.session ? await refreshAccessToken(client) : null);
   }
   return null;
 }
@@ -66,12 +68,17 @@ export async function request(path, options = {}) {
       const token = await accessToken();
       if (token) requestHeaders.set("Authorization", `Bearer ${token}`);
     }
-    const response = await fetch(`${API_BASE_URL}${path}`, {
+    const send = () => fetch(`${API_BASE_URL}${path}`, {
       method,
       headers: requestHeaders,
       body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
       signal: controller.signal,
       cache: "no-store",
+    });
+    const response = await fetchWithSessionRecovery(send, {
+      enabled: authenticated && getAuthProvider() === "supabase",
+      refresh: () => refreshAccessToken(getSupabaseClient()),
+      setToken: (token) => requestHeaders.set("Authorization", `Bearer ${token}`),
     });
     const text = await response.text();
     let payload = null;
