@@ -1,6 +1,7 @@
 from functools import lru_cache
 from uuid import UUID
 import jwt
+import httpx
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
@@ -16,6 +17,49 @@ bearer = HTTPBearer(auto_error=False)
 @lru_cache(maxsize=8)
 def jwks_client(url):
     return jwt.PyJWKClient(url, cache_keys=True, lifespan=300, timeout=5)
+
+
+def verify_legacy_supabase_token(token, issuer):
+    """Legacy symmetric keys are not published in JWKS. Ask the issuer to verify."""
+    if not settings.supabase_anon_key:
+        raise ValueError("Supabase public API key is required")
+    claims = jwt.decode(
+        token,
+        algorithms=["HS256"],
+        audience="authenticated",
+        issuer=issuer,
+        options={
+            "verify_signature": False,
+            "verify_exp": True,
+            "verify_nbf": True,
+            "verify_aud": True,
+            "verify_iss": True,
+            "require": ["sub", "exp", "iss", "aud"],
+        },
+    )
+    if claims.get("role") != "authenticated":
+        raise ValueError("Unauthenticated role")
+    UUID(claims["sub"])
+    try:
+        response = httpx.get(
+            issuer + "/user",
+            headers={"apikey": settings.supabase_anon_key, "Authorization": "Bearer " + token},
+            timeout=5,
+            follow_redirects=False,
+        )
+    except httpx.RequestError:
+        raise HTTPException(503, "Authentication service unavailable. Please try again.") from None
+    if response.status_code in {401, 403}:
+        raise ValueError("Supabase rejected token")
+    if response.status_code != 200:
+        raise HTTPException(503, "Authentication service unavailable. Please try again.")
+    try:
+        user = response.json()
+    except ValueError:
+        raise HTTPException(503, "Authentication service returned an invalid response") from None
+    if not isinstance(user, dict) or user.get("id") != claims["sub"]:
+        raise ValueError("Token identity mismatch")
+    return claims
 
 
 def verify_token(token):
@@ -39,6 +83,8 @@ def verify_token(token):
         algorithms, audience = ["RS256", "ES256"], "authenticated"
         url = issuer + "/.well-known/jwks.json"
         header = jwt.get_unverified_header(token)
+        if header.get("alg") == "HS256":
+            return verify_legacy_supabase_token(token, issuer)
         if header.get("alg") not in algorithms or not isinstance(header.get("kid"), str):
             raise ValueError("Untrusted algorithm")
         key = jwks_client(url).get_signing_key_from_jwt(token).key
