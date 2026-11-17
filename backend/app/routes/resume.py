@@ -84,3 +84,86 @@ def match_resume(opportunity_id: str, body: ResumeMatchInput, owner: Owner):
     return ok(
         compare_skills(candidate_skills, opp.get("requirements", {}), opportunity=opp)
     )
+
+
+@router.post("/resume/matches")
+def match_top_opportunities(owner: Owner, body: dict | None = None):
+    doc_id = (body or {}).get("document_id")
+    if doc_id:
+        analysis = documents.get("skill_analysis", doc_id, owner)
+    else:
+        records = documents.scan("skill_analysis", limit=50, owner=owner)
+        analysis = (
+            max(records, key=lambda r: (str(r.get("_updated_at") or ""), str(r.get("id") or "")))
+            if records
+            else None
+        )
+
+    if not analysis:
+        raise HTTPException(404, "No resume analysis available. Please upload a resume first.")
+
+    candidate_skills = analysis.get("skills") or analysis.get("parsed_skills") or []
+
+    from app.services import arbeitnow
+    raw_opps = []
+    try:
+        raw_opps.extend(documents.scan("opportunities", limit=50))
+    except Exception:
+        pass
+    try:
+        raw_opps.extend(arbeitnow.listings()[:50])
+    except Exception:
+        pass
+
+    seen_ids = set()
+    opps = []
+    for opp in raw_opps:
+        if opp.get("id") and opp["id"] not in seen_ids:
+            seen_ids.add(opp["id"])
+            opps.append(opp)
+
+    scored = []
+    for opp in opps:
+        comp = compare_skills(candidate_skills, opp.get("requirements", {}), opportunity=opp)
+        has_criteria = comp.get("criteria_available", False)
+        score = comp.get("score")
+        matched = comp.get("matched_required", []) + comp.get("matched_preferred", [])
+        missing = comp.get("missing_required", [])
+
+        reasons = []
+        if matched:
+            reasons.append(f"Matched {len(matched)} relevant skill(s): {', '.join(matched[:4])}")
+        if missing:
+            reasons.append(f"Missing {len(missing)} requirement(s): {', '.join(missing[:3])}")
+        if not has_criteria:
+            reasons.append(
+                "Opportunity does not publish structured skill requirements; criteria cannot be evaluated."
+            )
+
+        scored.append(
+            {
+                "opportunity_id": opp["id"],
+                "title": opp.get("title") or "Opportunity",
+                "organization": opp.get("organization") or opp.get("company_name") or "Employer / Sponsor",
+                "category": opp.get("category") or "opportunity",
+                "location": opp.get("location") or "Remote / Unspecified",
+                "match_percentage": round(score) if (has_criteria and score is not None) else None,
+                "criteria_available": has_criteria,
+                "matched_skills": matched,
+                "missing_skills": missing,
+                "reasons": reasons,
+                "detail_url": f"/opportunities/{opp['id']}",
+            }
+        )
+
+    scored.sort(
+        key=lambda x: (
+            1 if x["criteria_available"] and x["match_percentage"] is not None else 0,
+            x["match_percentage"] or 0,
+            len(x["matched_skills"]),
+        ),
+        reverse=True,
+    )
+
+    top_3 = scored[:3]
+    return ok(top_3)

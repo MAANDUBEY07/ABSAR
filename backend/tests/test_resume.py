@@ -488,6 +488,119 @@ class TestResumeAnalyzerService(unittest.TestCase):
         self.assertTrue(match_b["has_missing_opportunity_criteria"])
         self.assertIsNone(match_b["score"])
 
+    def test_aarav_sharma_structured_experience_and_credentials(self):
+        """Verify full structured intelligence extraction for Aarav Sharma CV."""
+        fixture_path = os.path.join(
+            os.path.dirname(__file__), "fixtures", "Aarav_Sharma_Data_Scientist_CV.pdf"
+        )
+        with open(fixture_path, "rb") as f:
+            pdf_bytes = f.read()
+
+        result = analyze_resume(pdf_bytes, "test-user-aarav", "doc-aarav-1")
+
+        # 1. Candidate Info
+        self.assertIn("candidate", result)
+        cand = result["candidate"]
+        self.assertEqual(cand.get("name"), "Aarav Sharma")
+        self.assertEqual(cand.get("title"), "Senior Data Scientist")
+        self.assertEqual(cand.get("email"), "aarav.sharma.ds@email.com")
+        self.assertEqual(cand.get("phone"), "+91 98765 43210")
+        self.assertIn("Bengaluru", cand.get("location", ""))
+        self.assertIn("linkedin.com", cand.get("linkedin", ""))
+        self.assertIn("github.com", cand.get("github", ""))
+
+        # 2. Work Experience Entries
+        self.assertIn("experience", result)
+        exp = result["experience"]
+        self.assertEqual(len(exp), 3)
+
+        finpulse = exp[0]
+        self.assertEqual(finpulse["title"], "Senior Data Scientist")
+        self.assertEqual(finpulse["organization"], "FinPulse Technologies")
+        self.assertEqual(finpulse["location"], "Bengaluru")
+        self.assertEqual(finpulse["start_date"], "July 2024")
+        self.assertEqual(finpulse["end_date"], "Present")
+        self.assertTrue(finpulse["is_current"])
+        self.assertGreaterEqual(len(finpulse["responsibilities"]), 3)
+        self.assertGreaterEqual(len(finpulse["achievements"]), 2)
+
+        cartwave = exp[1]
+        self.assertEqual(cartwave["title"], "Data Scientist")
+        self.assertEqual(cartwave["organization"], "CartWave Retail Analytics")
+        self.assertEqual(cartwave["start_date"], "June 2022")
+        self.assertEqual(cartwave["end_date"], "June 2024")
+
+        quantedge = exp[2]
+        self.assertEqual(quantedge["title"], "Data Science Intern")
+        self.assertEqual(quantedge["organization"], "QuantEdge Solutions")
+
+        # Total experience
+        self.assertEqual(result["experience_years"], 4.0)
+
+        # 3. Skills & Categories
+        self.assertIn("skill_categories", result)
+        categories = result["skill_categories"]
+        self.assertIn("Programming Languages", categories)
+        self.assertIn("Machine Learning & AI", categories)
+        self.assertIn("Data Engineering & Cloud", categories)
+        self.assertIn("Experimentation & Analytics", categories)
+        self.assertIn("python", categories["Programming Languages"])
+        self.assertIn("scikit-learn", categories["Machine Learning & AI"])
+
+        # 4. Education
+        self.assertEqual(len(result["education"]), 1)
+        edu = result["education"][0]
+        self.assertEqual(edu["degree"], "B.Tech")
+        self.assertIn("Computer Science & Engineering", edu["field"])
+        self.assertIn("Indian Institute of Information Technology", edu["institution"])
+        self.assertEqual(edu["graduation_year"], 2022)
+        self.assertIn("8.84", edu["gpa"])
+
+        # 5. Projects
+        self.assertEqual(len(result["projects"]), 2)
+        p1 = result["projects"][0]
+        self.assertEqual(p1["name"], "Real-Time Fraud Detection Engine")
+        self.assertIn("PyTorch", p1["technologies"])
+        self.assertGreaterEqual(len(p1["outcomes"]), 1)
+
+        # 6. Certifications & Publications
+        self.assertEqual(len(result["certifications"]), 1)
+        self.assertEqual(result["certifications"][0]["name"], "AWS Certified Machine Learning – Specialty")
+        self.assertEqual(len(result["publications"]), 1)
+        self.assertIn("Handling Concept Drift", result["publications"][0]["title"])
+
+    def test_michael_adams_or_black_and_white_modern_professional_resume(self):
+        """Verify extraction and future date handling for Michael Adams / Black and White Modern Professional Resume."""
+        fixture_path = os.path.join(
+            os.path.dirname(__file__), "fixtures", "michael_adams_resume.pdf"
+        )
+        with open(fixture_path, "rb") as f:
+            pdf_bytes = f.read()
+
+        result = analyze_resume(pdf_bytes, "test-user-adams", "doc-adams-1")
+
+        cand = result["candidate"]
+        self.assertEqual(cand["name"], "Michael Adams")
+        self.assertEqual(cand["title"], "Graphic Designer")
+        self.assertEqual(cand["email"], "hello@reallygreatsite.com")
+        self.assertEqual(cand["phone"], "+123-456-7890")
+
+        exp = result["experience"]
+        self.assertEqual(len(exp), 3)
+        self.assertEqual(exp[0]["organization"], "Borcelle Studio")
+        self.assertEqual(exp[0]["start_date"], "2030")
+
+        # Future-dated warning present
+        self.assertTrue(any("Future-dated" in w for w in result["warnings"]))
+        self.assertEqual(result["experience_years"], 2.0)
+
+        # Soft skills only
+        self.assertGreaterEqual(len(result["soft_skills"]), 5)
+        self.assertEqual(result["technical_skills"], [])
+
+        # Languages
+        self.assertEqual(len(result["languages"]), 4)
+
 
 if __name__ == "__main__":
     unittest.main()

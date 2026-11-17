@@ -47,3 +47,8 @@ class ResumeAnalysis(BaseModel):
     projects: list[dict] | None = None
     certifications: list[dict] | None = None
     publications: list[dict] | None = None
+    candidate: dict | None = None
+    experience: list[dict] | None = None
+    skill_categories: dict[str, list[str]] | None = None
+    completeness_score: float | None = Field(None, ge=0, le=100)
+    completeness_breakdown: dict | None = None

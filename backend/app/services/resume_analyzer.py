@@ -187,6 +187,58 @@ COMMON_LANGUAGES = [
 
 
 # ---------------------------------------------------------------------------
+# Skill Categories & Taxonomy Mapping
+# ---------------------------------------------------------------------------
+
+SKILL_CATEGORY_MAP: dict[str, list[str]] = {
+    "Programming Languages": [
+        "python", "sql", "postgresql", "bigquery", "r", "bash", "java", "c++", "c",
+        "javascript", "typescript", "go", "rust", "php", "ruby", "scala", "kotlin", "swift", "html", "css"
+    ],
+    "Machine Learning & AI": [
+        "machine learning", "deep learning", "pytorch", "tensorflow", "scikit-learn", "xgboost",
+        "lightgbm", "hugging face transformers", "nlp", "computer vision", "generative ai",
+        "langchain", "hdbscan", "smote", "isolation forests", "prophet", "gradient boosting"
+    ],
+    "Data Engineering & Cloud": [
+        "pyspark", "apache airflow", "dbt", "docker", "kubernetes", "aws sagemaker", "s3",
+        "ec2", "aws", "azure", "gcp", "mlflow", "fastapi", "git", "terraform", "ansible", "ci/cd", "linux"
+    ],
+    "Experimentation & Analytics": [
+        "a/b testing", "causal inference", "bayesian statistics", "tableau", "matplotlib",
+        "seaborn", "pandas", "numpy", "statistics"
+    ],
+    "Frameworks & Web": [
+        "react", "node.js", "next.js", "django", "flask", "express", "spring boot"
+    ],
+    "Databases & Storage": [
+        "mongodb", "redis", "mysql", "elasticsearch", "cassandra", "dynamodb", "neo4j"
+    ],
+}
+
+
+def categorize_skills(technical_skills: list[str], soft_skills: list[str]) -> dict[str, list[str]]:
+    """Groups detected technical and soft skills into structured domain categories."""
+    categories: dict[str, list[str]] = {}
+    assigned_tech: set[str] = set()
+
+    for cat_name, skill_list in SKILL_CATEGORY_MAP.items():
+        matched = [s for s in technical_skills if s.lower() in skill_list]
+        if matched:
+            categories[cat_name] = sorted(matched)
+            assigned_tech.update(matched)
+
+    remaining_tech = [s for s in technical_skills if s not in assigned_tech]
+    if remaining_tech:
+        categories["Tools & Specialized Technologies"] = sorted(remaining_tech)
+
+    if soft_skills:
+        categories["Soft Skills & Professional Competencies"] = sorted(soft_skills)
+
+    return categories
+
+
+# ---------------------------------------------------------------------------
 # Data Models
 # ---------------------------------------------------------------------------
 
@@ -218,6 +270,11 @@ class ResumeAnalysisResult(dict):
         projects: list[dict[str, Any]] | None = None,
         certifications: list[dict[str, Any]] | None = None,
         publications: list[dict[str, Any]] | None = None,
+        candidate: dict[str, Any] | None = None,
+        experience: list[dict[str, Any]] | None = None,
+        skill_categories: dict[str, list[str]] | None = None,
+        completeness_score: float | None = None,
+        completeness_breakdown: dict[str, Any] | None = None,
     ) -> None:
         self.parsed_skills = parsed_skills
         self.experience_years = experience_years
@@ -240,6 +297,11 @@ class ResumeAnalysisResult(dict):
         self.projects = projects or []
         self.certifications = certifications or []
         self.publications = publications or []
+        self.candidate = candidate or {}
+        self.experience = experience or []
+        self.skill_categories = skill_categories or {}
+        self.completeness_score = completeness_score if completeness_score is not None else readiness_score
+        self.completeness_breakdown = completeness_breakdown or readiness_breakdown
 
         # If owner_id and document_id are supplied, populate dict with exact fields required by Member 2 ResumeAnalysis:
         if owner_id is not None and document_id is not None:
@@ -262,6 +324,11 @@ class ResumeAnalysisResult(dict):
                 projects=self.projects,
                 certifications=self.certifications,
                 publications=self.publications,
+                candidate=self.candidate,
+                experience=self.experience,
+                skill_categories=self.skill_categories,
+                completeness_score=round(self.completeness_score, 1),
+                completeness_breakdown=self.completeness_breakdown,
             )
         else:
             payload: dict[str, Any] = {
@@ -275,9 +342,16 @@ class ResumeAnalysisResult(dict):
                 "readiness_breakdown": self.readiness_breakdown,
                 "recommendations": self.recommendations,
                 "warnings": self.warnings,
+                "evidence": self.evidence,
+                "disclaimer": self.disclaimer,
                 "projects": self.projects,
                 "certifications": self.certifications,
                 "publications": self.publications,
+                "candidate": self.candidate,
+                "experience": self.experience,
+                "skill_categories": self.skill_categories,
+                "completeness_score": round(self.completeness_score, 1),
+                "completeness_breakdown": self.completeness_breakdown,
             }
             if self.matched_skills:
                 payload["matched_skills"] = self.matched_skills
@@ -407,7 +481,7 @@ def extract_languages(text: str) -> list[dict[str, str]]:
 
 
 def extract_projects(text: str) -> list[dict[str, Any]]:
-    """Extracts structured projects with name, technologies, and descriptions."""
+    """Extracts structured projects with name, technologies, descriptions, responsibilities, and outcomes."""
     if not text:
         return []
 
@@ -430,6 +504,7 @@ def extract_projects(text: str) -> list[dict[str, Any]]:
     raw_lines = [line.strip() for line in proj_text.strip().split("\n") if line.strip()]
     projects: list[dict[str, Any]] = []
     current_proj: dict[str, Any] | None = None
+    bullet_re = r"^[\s•·\-\*\u00b7\u2022\u25cf\u25cb\u25aa\u25ab\?\u2013\u2014]"
 
     for line in raw_lines:
         proj_title_match = re.match(
@@ -444,14 +519,27 @@ def extract_projects(text: str) -> list[dict[str, Any]]:
                 "name": name,
                 "technologies": techs,
                 "description": "",
+                "responsibilities": [],
+                "outcomes": [],
             }
             projects.append(current_proj)
         elif current_proj is not None:
-            clean = re.sub(r"^[\s•·\-\*\u00b7\u2022\u25cf\u25cb\u25aa\u25ab\?\u2013\u2014]+", "", line).strip()
-            if not current_proj["description"]:
-                current_proj["description"] = clean
-            else:
-                current_proj["description"] += " " + clean
+            is_bullet = bool(re.match(bullet_re, line))
+            clean = re.sub(bullet_re, "", line).strip()
+            if clean:
+                if not current_proj["description"]:
+                    current_proj["description"] = clean
+                else:
+                    current_proj["description"] += " " + clean
+                if is_bullet or not current_proj["responsibilities"]:
+                    current_proj["responsibilities"].append(clean)
+                else:
+                    current_proj["responsibilities"][-1] += " " + clean
+
+    for p in projects:
+        for r in p["responsibilities"]:
+            if re.search(r"(?:\d+%\s*|\d+\+\s*|\b(?:achieving|achieved|improving|improved|reducing|reduced|increasing|increased)\b)", r, re.I):
+                p["outcomes"].append(r)
 
     return projects
 
@@ -527,6 +615,8 @@ def extract_certifications_and_publications(
                     "authors": author,
                     "venue": venue,
                     "year": year,
+                    "source_evidence": clean,
+                    "confidence": "EXTRACTED_EXACT",
                 }
             )
         elif re.search(
@@ -549,6 +639,8 @@ def extract_certifications_and_publications(
                     "name": name,
                     "issuer": issuer,
                     "year": year,
+                    "source_evidence": clean,
+                    "confidence": "EXTRACTED_EXACT",
                 }
             )
 
@@ -763,6 +855,177 @@ def extract_education(text: str) -> list[dict[str, Any]]:
     return education_records
 
 
+def extract_candidate_info(text: str) -> dict[str, Any]:
+    """Extracts candidate profile summary: name, title, contact information, location, and social links."""
+    if not text:
+        return {}
+
+    lines = [l.strip() for l in text.split("\n") if l.strip()]
+    name = lines[0] if lines else "Candidate"
+
+    title = None
+    for l in lines[1:4]:
+        if not re.search(r"@|\+?\d|http|linkedin|github", l, re.IGNORECASE) and len(l) < 50:
+            title = l
+            break
+
+    email_match = re.search(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", text)
+    email = email_match.group(0) if email_match else None
+
+    phone_match = re.search(r"(?:\+\d{1,3}[\s-]?)?\(?\d{3,5}\)?[\s-]?\d{3,5}(?:[\s-]?\d{3,5})?", text)
+    phone = phone_match.group(0).strip() if phone_match else None
+
+    linkedin_match = re.search(r"(?:linkedin\.com/in/[a-zA-Z0-9\-_]+)", text, re.IGNORECASE)
+    linkedin = linkedin_match.group(0) if linkedin_match else None
+
+    github_match = re.search(r"(?:github\.com/[a-zA-Z0-9\-_]+)", text, re.IGNORECASE)
+    github = github_match.group(0) if github_match else None
+
+    location = None
+    for l in lines[:6]:
+        parts = [p.strip() for p in l.split("|")]
+        for p in parts:
+            if re.search(r"([A-Za-z]+,\s*[A-Za-z]+)", p) and not re.search(
+                r"@|\+?\d|http|linkedin|github|scientist|engineer|developer|designer", p, re.IGNORECASE
+            ):
+                location = p
+                break
+        if location:
+            break
+
+    if not location:
+        contact_idx = -1
+        for i, l in enumerate(lines):
+            if l.upper() == "CONTACT":
+                contact_idx = i
+                break
+        if contact_idx != -1:
+            for l in lines[contact_idx + 1 : contact_idx + 5]:
+                if not re.search(r"@|\+?\d", l) and len(l) < 60:
+                    location = l
+                    break
+
+    return {
+        "name": name.title() if name.isupper() else name,
+        "title": title.title() if title and title.isupper() else title,
+        "email": email,
+        "phone": phone,
+        "location": location,
+        "linkedin": linkedin,
+        "github": github,
+        "source": "RESUME_EXTRACTION",
+    }
+
+
+def extract_experience_entries(text: str) -> list[dict[str, Any]]:
+    """
+    Extracts structured professional employment entries:
+    Job title, organization, location, start and end dates, duration,
+    and responsibilities/measurable achievements.
+    """
+    if not text:
+        return []
+
+    exp_header = re.search(
+        r"\b(?:WORK\s+EXPERIENCE|PROFESSIONAL\s+EXPERIENCE|EMPLOYMENT\s+HISTORY)\b",
+        text,
+        re.IGNORECASE,
+    )
+    if not exp_header:
+        return []
+
+    after = text[exp_header.end() :]
+    next_header = re.search(
+        r"\n\s*(?:EDUCATION|SELECTED\s+PROJECTS|ACADEMIC\s+PROJECTS|PROJECTS|SKILLS|CERTIFICATIONS)\b",
+        after,
+        re.IGNORECASE,
+    )
+    exp_text = after[: next_header.start()] if next_header else after
+
+    entries: list[dict[str, Any]] = []
+    current_entry: dict[str, Any] | None = None
+    lines = [l.strip() for l in exp_text.split("\n") if l.strip()]
+    bullet_re = r"^[\s•·\-\*\u00b7\u2022\u25cf\u25cb\u25aa\u25ab\?\u2013\u2014]"
+
+    inline_re = (
+        r"^([A-Za-z\s]+?)\s*\|\s*([A-Za-z0-9\s&.,-]+?)(?:,\s*([A-Za-z\s]+))?\s+"
+        r"((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4})\s*[\-–—\?to]+\s*(\w+(?:\s+\d{4})?)$"
+    )
+    date_header_re = r"^(\d{4})\s*[\-–—to]+\s*(\d{4}|Present|Current)$"
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        inline_match = re.match(inline_re, line, re.IGNORECASE)
+        date_match = re.match(date_header_re, line, re.IGNORECASE)
+
+        if inline_match:
+            title = inline_match.group(1).strip()
+            org = inline_match.group(2).strip()
+            loc = inline_match.group(3).strip() if inline_match.group(3) else None
+            start_d = inline_match.group(4).strip()
+            end_d = inline_match.group(5).strip()
+            is_curr = end_d.lower() in ("present", "current")
+            current_entry = {
+                "title": title,
+                "organization": org,
+                "location": loc,
+                "start_date": start_d,
+                "end_date": end_d,
+                "duration": f"{start_d} – {end_d}",
+                "is_current": is_curr,
+                "source_evidence": line.strip(),
+                "confidence": "EXTRACTED_EXACT",
+                "responsibilities": [],
+                "achievements": [],
+            }
+            entries.append(current_entry)
+            i += 1
+        elif date_match and i + 2 < len(lines) and not re.match(bullet_re, lines[i + 1]):
+            start_d = date_match.group(1).strip()
+            end_d = date_match.group(2).strip()
+            is_curr = end_d.lower() in ("present", "current")
+            org = lines[i + 1].strip()
+            title = lines[i + 2].strip()
+            current_entry = {
+                "title": title,
+                "organization": org,
+                "location": None,
+                "start_date": start_d,
+                "end_date": end_d,
+                "duration": f"{start_d} – {end_d}",
+                "is_current": is_curr,
+                "source_evidence": f"{line.strip()} | {org} | {title}",
+                "confidence": "EXTRACTED_EXACT",
+                "responsibilities": [],
+                "achievements": [],
+            }
+            entries.append(current_entry)
+            i += 3
+        elif current_entry:
+            is_bullet = bool(re.match(bullet_re, line))
+            clean = re.sub(bullet_re, "", line).strip()
+            if clean:
+                if is_bullet or not current_entry["responsibilities"]:
+                    current_entry["responsibilities"].append(clean)
+                else:
+                    current_entry["responsibilities"][-1] += " " + clean
+            i += 1
+        else:
+            i += 1
+
+    for entry in entries:
+        for resp in entry["responsibilities"]:
+            if re.search(
+                r"(?:\d+%\s*|\d+\+\s*|\d+M\+\s*|ROC-AUC|₹|\$|\b(?:increased|reduced|lowered|lowering|cutting|cut|driving|driven|improved|improving|expanded|achieved|automating)\b)",
+                resp,
+                re.IGNORECASE,
+            ):
+                entry["achievements"].append(resp)
+
+    return entries
+
+
 def estimate_experience_years_with_warnings(text: str) -> tuple[float, list[str]]:
     """
     Estimates total years of completed professional/internship experience
@@ -890,9 +1153,12 @@ class ResumeAnalyzer:
         all_skills, tech_skills, soft_skills, evidence = extract_skills_with_evidence(resume_text)
         education = extract_education(resume_text)
         exp_years, date_warnings = estimate_experience_years_with_warnings(resume_text)
+        experience = extract_experience_entries(resume_text)
         languages = extract_languages(resume_text)
         projects = extract_projects(resume_text)
         certifications, publications = extract_certifications_and_publications(resume_text)
+        candidate = extract_candidate_info(resume_text)
+        skill_categories = categorize_skills(tech_skills, soft_skills)
 
         # Baseline readiness based on resume completeness breakdown
         has_contact = bool(
@@ -901,7 +1167,7 @@ class ResumeAnalyzer:
         )
         contact_score = 10.0 if has_contact else 0.0
         education_score = 25.0 if education else 0.0
-        exp_score = 25.0 if exp_years > 0 else 0.0
+        exp_score = 25.0 if exp_years > 0 or experience else 0.0
         tech_score = min(len(tech_skills) * 5.0, 20.0)
         soft_lang_score = min(
             len(soft_skills) * 2.5
@@ -926,7 +1192,7 @@ class ResumeAnalyzer:
             "explanation": (
                 "Calculated based on resume profile completeness (contact info, education credentials, "
                 "work experience history, technical/soft skills, languages, projects, certifications, and publications). "
-                "Match readiness against specific opportunities is evaluated during opportunity comparison."
+                "Resume completeness measures documentation coverage, not guaranteed job readiness or hiring decisions."
             ),
         }
 
@@ -939,13 +1205,21 @@ class ResumeAnalyzer:
             recommendations.append(
                 "Include your highest degree, institution name, and graduation year."
             )
-        if exp_years == 0:
+        if exp_years == 0 and not experience:
             recommendations.append(
                 "Highlight academic projects, hackathons, or internships to demonstrate practical experience."
             )
         if not languages:
             recommendations.append(
                 "List spoken and written languages with proficiency levels to enhance global profile visibility."
+            )
+        if not projects:
+            recommendations.append(
+                "Highlight personal or open-source projects with measurable outcomes to demonstrate hands-on application."
+            )
+        if not certifications:
+            recommendations.append(
+                "Consider industry certifications (e.g., AWS, Azure, GCP) to validate core competencies."
             )
 
         all_warnings = list(date_warnings)
@@ -970,6 +1244,11 @@ class ResumeAnalyzer:
             projects=projects,
             certifications=certifications,
             publications=publications,
+            candidate=candidate,
+            experience=experience,
+            skill_categories=skill_categories,
+            completeness_score=readiness_score,
+            completeness_breakdown=breakdown,
         )
 
     def analyze_pdf(
@@ -1077,6 +1356,11 @@ class ResumeAnalyzer:
             projects=base_result.projects,
             certifications=base_result.certifications,
             publications=base_result.publications,
+            candidate=base_result.candidate,
+            experience=base_result.experience,
+            skill_categories=base_result.skill_categories,
+            completeness_score=base_result.completeness_score,
+            completeness_breakdown=base_result.completeness_breakdown,
         )
 
 

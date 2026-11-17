@@ -152,6 +152,7 @@ export const api = {
   latestResume: () => request("/resume/latest"),
   compareSkills: (opportunityId) => request("/skills/compare", { method: "POST", body: { opportunity_id: opportunityId } }),
   matchResume: (opportunityId, documentId) => request(`/resume/match/${encodeURIComponent(opportunityId)}`, { method: "POST", body: { document_id: documentId } }),
+  matchTopOpportunities: (documentId) => request("/resume/matches", { method: "POST", body: documentId ? { document_id: documentId } : {} }),
 };
 
 export async function localAuth(action, credentials) {

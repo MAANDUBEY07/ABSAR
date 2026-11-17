@@ -373,7 +373,9 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .risk-metric-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
 .risk-metric-title { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink); }
 .risk-metric-title strong { font-weight: 800; }
-.risk-score-pill { font-size: 10px; font-weight: 800; color: var(--orange); background: var(--orange-soft); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--orange); }
+.risk-score-pill { font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 6px; }
+.risk-score-pill.has-risk { color: var(--orange); background: var(--orange-soft); border: 1px solid var(--orange); }
+.risk-score-pill.zero-risk { color: var(--green); background: var(--green-soft); border: 1px solid var(--green); }
 .risk-explanation-text { margin: 0; font-size: 11px; color: var(--ink); line-height: 1.5; }
 .risk-disclaimer-text { font-size: 9.5px; color: var(--muted); font-style: italic; }
 
@@ -407,6 +409,75 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .manual-review-card p { margin: 0; font-size: 9.5px; color: var(--muted); }
 .manual-review-textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 11px; color: var(--ink); background: var(--surface); outline: none; }
 .manual-review-textarea:focus { border-color: var(--green); }
+
+/* Resume Intelligence Redesign */
+.resume-candidate-card { padding: 16px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-soft); margin-bottom: 18px; display: grid; gap: 8px; }
+.candidate-name-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.candidate-name-row h2 { margin: 0; font-size: 18px; font-weight: 800; color: var(--ink); letter-spacing: -0.3px; }
+.candidate-title-badge { font-size: 11px; font-weight: 700; color: var(--green); background: var(--green-soft); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--green); }
+.candidate-meta-row { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; font-size: 10.5px; color: var(--muted); }
+.candidate-meta-item { display: inline-flex; align-items: center; gap: 5px; }
+.candidate-meta-item a { color: var(--green); text-decoration: none; font-weight: 600; }
+.candidate-meta-item a:hover { text-decoration: underline; }
+
+.section-block { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+.section-block-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.section-block-header h3 { margin: 0; font-size: 12.5px; font-weight: 800; color: var(--ink); text-transform: uppercase; letter-spacing: 0.04em; display: inline-flex; align-items: center; gap: 7px; }
+
+/* Timeline Experience */
+.experience-timeline { display: grid; gap: 12px; }
+.timeline-card { padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); display: grid; gap: 8px; transition: border-color .15s ease; }
+.timeline-card:hover { border-color: var(--green); }
+.timeline-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.timeline-role-info strong { font-size: 12px; color: var(--ink); display: block; font-weight: 800; }
+.timeline-role-info span { font-size: 11px; color: var(--green); font-weight: 700; }
+.timeline-badges { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.duration-pill { font-size: 9.5px; font-weight: 700; color: var(--muted); background: var(--surface-soft); padding: 3px 8px; border-radius: 5px; border: 1px solid var(--line); }
+.current-pill { font-size: 9px; font-weight: 800; color: var(--green); background: var(--green-soft); padding: 2px 7px; border-radius: 5px; border: 1px solid var(--green); }
+.timeline-resp-list { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.timeline-resp-list li { font-size: 10.5px; color: var(--ink); line-height: 1.5; }
+.achievement-list { margin-top: 6px; display: grid; gap: 5px; }
+.achievement-tag { display: inline-flex; align-items: flex-start; gap: 6px; font-size: 10px; color: var(--green-dark); background: var(--surface-soft); padding: 5px 9px; border-radius: 6px; border-left: 3px solid var(--green); line-height: 1.45; }
+
+/* Categorized Skills */
+.skill-categories-grid { display: grid; gap: 12px; }
+.skill-category-card { padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); display: grid; gap: 8px; }
+.skill-category-title { display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 800; color: var(--ink-2); }
+.skill-chips-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.show-all-btn { background: none; border: none; padding: 0; color: var(--green); font-size: 10px; font-weight: 700; cursor: pointer; text-decoration: underline; margin-top: 4px; }
+
+/* Projects & Outcomes */
+.projects-grid { display: grid; gap: 12px; }
+.project-card { padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); display: grid; gap: 8px; }
+.project-card-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.project-card-header strong { font-size: 12px; color: var(--ink); font-weight: 800; }
+.project-description { font-size: 11px; color: var(--ink); line-height: 1.55; margin: 0; }
+.project-outcome-pill { display: inline-flex; align-items: flex-start; gap: 6px; font-size: 10px; color: #855f19; background: var(--yellow-soft); padding: 4px 8px; border-radius: 6px; border: 1px solid #ebd292; line-height: 1.4; }
+
+/* Credentials Grid: Education, Certs, Publications, Languages */
+.credentials-double-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.credential-card { padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); display: grid; gap: 4px; }
+.credential-card strong { font-size: 11px; color: var(--ink); }
+.credential-card p { margin: 0; font-size: 10px; color: var(--muted); }
+
+/* Opportunity Shortlist Matching */
+.matches-section { margin-top: 24px; padding-top: 20px; border-top: 2px dashed var(--line); }
+.matches-hero { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.matches-hero h3 { margin: 0; font-size: 14px; font-weight: 800; color: var(--ink); display: inline-flex; align-items: center; gap: 7px; }
+.matches-cards-grid { display: grid; gap: 12px; }
+.matched-opp-card { padding: 16px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); display: grid; gap: 10px; transition: border-color .15s ease, box-shadow .15s ease; }
+.matched-opp-card:hover { border-color: var(--green); box-shadow: 0 3px 12px rgba(0,0,0,.04); }
+.matched-opp-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.matched-opp-title strong { font-size: 13px; color: var(--ink); display: block; font-weight: 800; }
+.matched-opp-title span { font-size: 10.5px; color: var(--muted); }
+.match-score-badge.measurable { background: var(--green-soft); color: var(--green-dark); border: 1px solid var(--green); font-weight: 800; }
+.match-score-badge.unscored { background: var(--surface-soft); color: var(--muted); border: 1px solid var(--line); font-weight: 700; }
+.match-skills-block { display: grid; gap: 6px; font-size: 10px; }
+.match-skills-block span.label { font-weight: 700; color: var(--ink-2); }
+.match-reasons-list { list-style: none; padding: 0; margin: 4px 0 0; display: grid; gap: 3px; font-size: 10px; color: var(--muted); }
+.match-action-row { display: flex; justify-content: flex-end; margin-top: 6px; }
+.view-opp-button { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: var(--green); text-decoration: none; padding: 6px 12px; border-radius: 7px; border: 1px solid var(--line); background: var(--surface-soft); transition: background-color .15s ease; }
+.view-opp-button:hover { background: var(--green-soft); border-color: var(--green); }
 
 /* Global Dark Theme Variable Overrides */
 [data-theme="dark"] {
