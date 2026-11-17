@@ -444,3 +444,6 @@ button:disabled { opacity: .55; cursor: not-allowed; }
   .source-info-card { flex-direction: column; align-items: stretch; }
   .source-external-link { justify-content: center; width: 100%; }
 }
+.stat-card-action { width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.stat-card-action:hover, .stat-card-action[aria-expanded="true"] { border-color: #ff8800; }
+.stat-card-action:focus-visible { outline: 3px solid #ff8800; outline-offset: 3px; }
