@@ -32,6 +32,7 @@ export default function OpportunityCard({ opportunity, saved = false, saving = f
       </div>
       <h3 className="opportunity-title">{opportunity.title || "Untitled opportunity"}</h3>
       <p className="organization-name">{organization}</p>
+      {opportunity.category_metadata?.application_status?.startsWith("Programme catalog") && <p className="form-feedback">Programme information — check current application availability.</p>}
       <div className="opportunity-meta">
         <span><MapPin size={14} aria-hidden="true" />{opportunity.location || "Location not specified"}</span>
         <span><Wallet size={14} aria-hidden="true" />{compensation}</span>

@@ -4,7 +4,7 @@ from app.repositories import documents
 from fastapi import Query
 from app.schemas.opportunity import OpportunityInput
 from app.services.catalog import opportunity, create_opportunity
-from app.services import arbeitnow, category_sources
+from app.services import arbeitnow, category_sources, india_sources
 from app.services.location_filter import matches_location
 from pymongo.errors import PyMongoError
 from sqlalchemy.exc import SQLAlchemyError
@@ -82,6 +82,7 @@ def list_opportunities(
     category: str | None = None,
     state: str | None = Query(None, max_length=200),
     location: str | None = Query(None, max_length=200),
+    country: Literal["India"] | None = None,
     search: str | None = Query(None, max_length=300),
     opportunity_mode: Literal["online", "offline", "hybrid"] | None = None,
 ):
@@ -97,14 +98,15 @@ def list_opportunities(
         database_available = False
 
     live_source_available = True
+    live_candidates = india_sources.listings(category)
     try:
-        live_candidates = (
+        international_candidates = [] if country == "India" else (
             category_sources.listings(category)
             if category in category_sources.CATEGORIES
             else arbeitnow.listings()
         )
+        live_candidates += international_candidates
     except (OSError, ValueError):
-        live_candidates = []
         live_source_available = False
 
     # Keep live listings at the front so page one includes fresh source data;
@@ -115,6 +117,11 @@ def list_opportunities(
     result = []
     for record in candidates:
         if category and record.get("category") != category:
+            continue
+        if country == "India" and not (
+            (record.get("category_metadata") or {}).get("country") == "India"
+            or matches_location(record, "India")
+        ):
             continue
         if not matches_location(record, state) or not matches_location(record, location):
             continue
@@ -142,6 +149,7 @@ def list_opportunities(
         live_source=(live_candidates[0].get("source_attribution") if live_candidates else None),
         database_available=database_available,
         live_source_available=live_source_available,
+        source_status=india_sources.source_status(category),
     )
 
 

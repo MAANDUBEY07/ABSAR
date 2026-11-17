@@ -16,6 +16,7 @@ export default function OpportunitiesPage() {
   const [category, setCategory] = useState("");
   const [location, setLocation] = useState("");
   const [state, setState] = useState("");
+  const [country, setCountry] = useState("India");
   const [mode, setMode] = useState("");
   const [page, setPage] = useState(0);
   const [items, setItems] = useState([]);
@@ -33,6 +34,7 @@ export default function OpportunitiesPage() {
     setCategory(params.get("category") || "");
     setLocation(params.get("location") || "");
     setState(params.get("state") || "");
+    setCountry(params.get("country") === "all" ? "" : "India");
     setMode(params.get("opportunity_mode") || "");
   }, []);
 
@@ -52,6 +54,7 @@ export default function OpportunitiesPage() {
           category,
           location: location.trim(),
           state: state.trim(),
+          country,
           opportunity_mode: mode,
         };
         const [result, following] = await Promise.all([
@@ -62,6 +65,9 @@ export default function OpportunitiesPage() {
         const rows = Array.isArray(result.items) ? result.items : [];
         setItems(rows);
         setHasMore(Array.isArray(following.items) && following.items.length > 0);
+        if (Object.values(result.meta?.source_status || {}).some((source) => !source.available)) {
+          setNotice("Some opportunity sources are temporarily unavailable. Showing listings from available sources.");
+        }
     } catch (requestError) {
       if (version !== loadVersion.current) return;
       setItems([]);
@@ -69,7 +75,7 @@ export default function OpportunitiesPage() {
       setError(requestError.message);
     }
     finally { if (version === loadVersion.current) setLoading(false); }
-  }, [category, location, state, mode, page, search]);
+  }, [category, location, state, country, mode, page, search]);
 
   useEffect(() => {
     const timer = setTimeout(load, 250);
@@ -99,10 +105,11 @@ export default function OpportunitiesPage() {
   }
 
   return <ProtectedWorkspace>
-    <div className="page-heading"><div><span className="eyebrow">DISCOVER</span><h1>Find opportunities</h1><p>Search current listings and use filters supported by the AVSAR API.</p></div><Link className="button button-secondary" href="/applications"><BookmarkCheck size={16} /> My applications</Link></div>
+    <div className="page-heading"><div><span className="eyebrow">DISCOVER</span><h1>Find opportunities</h1><p>Explore opportunities in India and international programmes open to applicants from India. Review each source for eligibility and application availability.</p></div><Link className="button button-secondary" href="/applications"><BookmarkCheck size={16} /> My applications</Link></div>
     <form className="filter-toolbar opportunity-filters" onSubmit={(event) => { event.preventDefault(); if (page) setPage(0); else load(); }} aria-label="Filter opportunities">
       <label className="searchbar"><Search size={17} aria-hidden="true" /><input value={search} onChange={(event) => { setSearch(event.target.value); setPage(0); }} placeholder="Search titles, organizations or descriptions" aria-label="Search opportunities" /></label>
       <label className="filter-select"><span className="sr-only">Category</span><select value={category} onChange={(event) => { setCategory(event.target.value); setPage(0); }}><option value="">All categories</option>{OPPORTUNITY_CATEGORIES.map((value) => <option value={value} key={value}>{CATEGORY_LABELS[value]}</option>)}</select></label>
+      <label className="filter-select"><span className="sr-only">Country</span><select value={country} onChange={(event) => { setCountry(event.target.value); setPage(0); }}><option value="India">India opportunities</option><option value="">All countries</option></select></label>
       <label className="filter-select"><span className="sr-only">City or location</span><input className="filter-location" value={location} onChange={(event) => { setLocation(event.target.value); setPage(0); }} placeholder="City / location" aria-label="Filter by city or location" /></label>
       <label className="filter-select"><span className="sr-only">State or union territory</span><input className="filter-location" value={state} onChange={(event) => { setState(event.target.value); setPage(0); }} placeholder="State / union territory" aria-label="Filter by state or union territory" /></label>
       <label className="filter-select"><span className="sr-only">Availability mode</span><select value={mode} onChange={(event) => { setMode(event.target.value); setPage(0); }}><option value="">Any mode</option><option value="online">Online</option><option value="offline">On-site</option><option value="hybrid">Hybrid</option></select></label>

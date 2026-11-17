@@ -104,8 +104,8 @@ function query(params) {
   return result ? `?${result}` : "";
 }
 
-async function requestPage(path) {
-  const payload = await request(path, { raw: true });
+async function requestPage(path, options = {}) {
+  const payload = await request(path, { ...options, raw: true });
   if (payload && typeof payload === "object" && Object.prototype.hasOwnProperty.call(payload, "data")) {
     return { items: payload.data, meta: payload.meta || {} };
   }
@@ -118,7 +118,7 @@ export const api = {
   logout: () => request("/auth/logout", { method: "POST" }),
   profile: () => request("/profile/me"),
   updateProfile: (values) => request("/profile/me", { method: "PUT", body: values }),
-  opportunities: (filters = {}) => requestPage(`/opportunities${query(filters)}`),
+  opportunities: (filters = {}) => requestPage(`/opportunities${query(filters)}`, { timeout: 30000 }),
   opportunity: (id) => request(`/opportunities/${encodeURIComponent(id)}`),
   recommendations: (filters = {}) => requestPage(`/recommendations${query(filters)}`),
   eligibility: (id, payload) => request(`/eligibility/check/${encodeURIComponent(id)}`, { method: "POST", ...(payload ? { body: payload } : {}) }),
