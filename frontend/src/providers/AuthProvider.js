@@ -182,8 +182,9 @@ export function AuthProvider({ children }) {
 
     if (provider === "local") {
       // Support local development login/signup emulation with OTP
-      const result = await localAuth("login", { email: normalizedEmail, password: cleanToken }).catch(async () => {
-        return await localAuth("signup", { email: normalizedEmail, password: cleanToken });
+      const emulatedPassword = cleanToken.length < 12 ? `${cleanToken}_local_dev_pass` : cleanToken;
+      const result = await localAuth("login", { email: normalizedEmail, password: emulatedPassword }).catch(async () => {
+        return await localAuth("signup", { email: normalizedEmail, password: emulatedPassword });
       });
       if (!result?.access_token) throw new Error("Local authentication failed.");
       storeLocalToken(result.access_token);
@@ -234,6 +235,13 @@ export function AuthProvider({ children }) {
     if (provider === "local") storeLocalToken(null);
     else await getSupabaseClient()?.auth.signOut();
     setUser(null);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("avsar_auth_tokens");
+        localStorage.removeItem("avsar_profile_cache");
+        sessionStorage.clear();
+      } catch {}
+    }
   }, [provider, user]);
 
   const value = useMemo(() => ({

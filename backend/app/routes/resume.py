@@ -23,10 +23,12 @@ async def resume(file: UploadFile, owner: Owner, db: DB):
 @router.post("/skills/compare")
 def compare(body: Compare, owner: Owner, db: DB):
     profile = owned(db, Profile, owner, owner)
+    opp = opportunity(body.opportunity_id)
     return ok(
         compare_skills(
             body.skills if body.skills is not None else profile.payload.get("skills"),
-            opportunity(body.opportunity_id).get("requirements", {}),
+            opp.get("requirements", {}),
+            opportunity=opp,
         )
     )
 
@@ -77,6 +79,8 @@ def match_resume(opportunity_id: str, body: ResumeMatchInput, owner: Owner):
     analysis = documents.get("skill_analysis", body.document_id, owner)
     if not analysis:
         raise HTTPException(404, "Resume analysis not found")
+    opp = opportunity(opportunity_id)
+    candidate_skills = analysis.get("skills") or analysis.get("parsed_skills") or []
     return ok(
-        compare_skills(analysis["skills"], opportunity(opportunity_id).get("requirements", {}))
+        compare_skills(candidate_skills, opp.get("requirements", {}), opportunity=opp)
     )

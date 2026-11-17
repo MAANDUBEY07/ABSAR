@@ -8,9 +8,12 @@ import OpportunityCard from "@/components/OpportunityCard";
 import Loading from "@/components/Loading";
 import { api } from "@/services/api";
 import { CATEGORY_LABELS, OPPORTUNITY_CATEGORIES } from "@/utils/constants";
+ backend-branch
 import DemoNotice from "@/components/DemoNotice";
 import { demoOpportunities } from "@/utils/demo-data";
 import { opportunityMode } from "@/utils/opportunity-mode.mjs";
+
+ main
 
 const PAGE_SIZE = 20;
 
@@ -20,14 +23,13 @@ export default function OpportunitiesPage() {
   const [location, setLocation] = useState("");
   const [mode, setMode] = useState("");
   const [page, setPage] = useState(0);
-  const [items, setItems] = useState(demoOpportunities);
+  const [items, setItems] = useState([]);
   const [savedIds, setSavedIds] = useState(() => new Set());
   const [savingIds, setSavingIds] = useState(() => new Set());
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [isDemo, setIsDemo] = useState(true);
   const loadVersion = useRef(0);
 
   useEffect(() => {
@@ -63,9 +65,9 @@ export default function OpportunitiesPage() {
         const rows = Array.isArray(result.items) ? result.items : [];
         setItems(rows);
         setHasMore(Array.isArray(following.items) && following.items.length > 0);
-      setIsDemo(false);
     } catch (requestError) {
       if (version !== loadVersion.current) return;
+ backend-branch
       const demoRows = demoOpportunities.filter((item) =>
         (!category || item.category === category)
         && (!location || String(item.location || "").toLowerCase().includes(location.toLowerCase()))
@@ -76,6 +78,10 @@ export default function OpportunitiesPage() {
       setItems(demoRows.slice(start, start + PAGE_SIZE));
       setHasMore(start + PAGE_SIZE < demoRows.length);
       setIsDemo(true);
+
+      setItems([]);
+      setHasMore(false);
+ main
       setError(requestError.message);
     }
     finally { if (version === loadVersion.current) setLoading(false); }
@@ -89,7 +95,7 @@ export default function OpportunitiesPage() {
   async function saveOpportunity(opportunity) {
     if (savedIds.has(opportunity.id) || savingIds.has(opportunity.id)) return;
     setNotice(""); setError("");
-    if (isDemo || String(opportunity.id).startsWith("demo-")) {
+    if (String(opportunity.id).startsWith("demo-")) {
       setNotice("This sample listing cannot be saved. Try again after live opportunities load.");
       return;
     }
@@ -116,7 +122,6 @@ export default function OpportunitiesPage() {
       <label className="filter-select"><span className="sr-only">Location</span><input className="filter-location" value={location} onChange={(event) => { setLocation(event.target.value); setPage(0); }} placeholder="State / location" aria-label="Filter by location" /></label>
       <label className="filter-select"><span className="sr-only">Availability mode</span><select value={mode} onChange={(event) => { setMode(event.target.value); setPage(0); }}><option value="">Any mode</option><option value="online">Online</option><option value="offline">On-site</option><option value="hybrid">Hybrid</option></select></label>
     </form>
-    {isDemo && <DemoNotice>{error ? "Live listings are unavailable. You can inspect and filter these examples; saving requires a live listing." : "Sample listings are available immediately while live results load. Saving requires a live listing."}</DemoNotice>}
     {mode && <p className="form-feedback">Showing listings with a confirmed {mode === "offline" ? "on-site" : mode} mode. Listings without mode information are excluded.</p>}
     {notice && <div className="inline-message" role="status">{notice}</div>}
     {error && <div className="inline-message error" role="alert"><span>{error}</span><button className="button button-secondary" type="button" onClick={load} disabled={loading}>Retry</button></div>}

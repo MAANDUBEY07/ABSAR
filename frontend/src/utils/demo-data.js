@@ -55,7 +55,7 @@ export const demoOpportunities = [
 ];
 
 export const demoProfile = {
-  name: "Aarav Mehta",
+  name: "",
   date_of_birth: "2003-08-14",
   degree: "B.Tech",
   branch: "Computer Science",

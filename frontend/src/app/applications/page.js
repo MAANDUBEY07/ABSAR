@@ -7,8 +7,6 @@ import ProtectedWorkspace from "@/components/ProtectedWorkspace";
 import Loading from "@/components/Loading";
 import { api } from "@/services/api";
 import { APPLICATION_STATUS_LABELS, BACKEND_APPLICATION_TRANSITIONS } from "@/utils/constants";
-import DemoNotice from "@/components/DemoNotice";
-import { demoApplications } from "@/utils/demo-data";
 
 const transitionLabel = {
   DRAFT: "PREPARING",
@@ -23,13 +21,12 @@ export default function ApplicationsPage() {
   const submissionKeys = useRef({});
   const [materials, setMaterials] = useState({});
   const [confirmations, setConfirmations] = useState({});
-  const [items, setItems] = useState(demoApplications);
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [updating, setUpdating] = useState("");
   const [itemErrors, setItemErrors] = useState({});
-  const [isDemo, setIsDemo] = useState(true);
   const load = useCallback(async () => {
     setError("");
     try {
@@ -39,8 +36,10 @@ export default function ApplicationsPage() {
         catch { return { ...application, opportunity: null }; }
       }));
       setItems(rows);
-      setIsDemo(false);
-    } catch (requestError) { setError(requestError.message); setIsDemo(true); }
+    } catch (requestError) {
+      setError(requestError.message);
+      setItems([]);
+    }
     finally { setLoading(false); }
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -48,7 +47,7 @@ export default function ApplicationsPage() {
   async function updateStatus(application, nextStatus) {
     if (nextStatus === "DRAFT") { setConfirmations((current) => ({ ...current, [application.id]: false })); delete submissionKeys.current[application.id]; }
     setUpdating(application.id); setNotice(""); setItemErrors((current) => ({ ...current, [application.id]: "" }));
-    if (isDemo || String(application.id).startsWith("demo-")) {
+    if (String(application.id).startsWith("demo-")) {
       setNotice("Sample application statuses are read-only. Refresh when the application service is available to update a real application.");
       setUpdating("");
       return;
@@ -65,7 +64,7 @@ export default function ApplicationsPage() {
 
   async function act(application, action) {
     setUpdating(application.id); setItemErrors((current) => ({ ...current, [application.id]: "" }));
-    if (isDemo || String(application.id).startsWith("demo-")) {
+    if (String(application.id).startsWith("demo-")) {
       setNotice("Sample application actions are read-only. Refresh when the application service is available.");
       setUpdating("");
       return;
@@ -97,7 +96,6 @@ export default function ApplicationsPage() {
 
   return <ProtectedWorkspace>
     <div className="page-heading"><div><span className="eyebrow">YOUR PROGRESS</span><h1>My applications</h1><p>Track saved opportunities and update statuses supported by the current application API.</p></div><button className="button button-secondary" type="button" onClick={load} disabled={loading}><RefreshCw size={15} /> Refresh</button></div>
-    {isDemo && <DemoNotice>{error ? "The application service is unavailable; sample tracker rows can still be explored." : "Sample tracker rows are shown while live applications load."}</DemoNotice>}
     {error && <div className="inline-message error" role="alert">{error}</div>}
     {notice && <div className="inline-message" role="status">{notice}</div>}
     {loading && !items.length ? <Loading label="Loading your applications" /> : items.length ? <div className="tracker-list">{items.map((application) => {
@@ -105,8 +103,8 @@ export default function ApplicationsPage() {
       const allowed = transitions.filter((status) => !["WITHDRAWN", "DRAFT", "READY_FOR_REVIEW"].includes(status) && transitionLabel[status]);
       return <article className="tracker-row" key={application.id}>
         <div className="tracker-main"><span className="tracker-mark"><ClipboardList size={18} /></span><div><strong className="tracker-title">{application.opportunity?.title || "Saved opportunity"}</strong><p>{application.opportunity?.organization || application.opportunity?.provider || application.opportunity_id}</p><small>Updated {application.created_at ? new Date(application.created_at).toLocaleDateString("en-IN") : "recently"}</small></div></div>
-        <div className="tracker-actions"><span className="badge badge-neutral">{APPLICATION_STATUS_LABELS[application.status] || application.status}</span>{allowed.length > 0 && <label className="sr-only" htmlFor={`status-${application.id}`}>Update status for {application.opportunity?.title || "this application"}</label>}{allowed.length > 0 && <select id={`status-${application.id}`} className="status-select" value="" onChange={(event) => event.target.value && updateStatus(application, event.target.value)} disabled={updating === application.id || isDemo || String(application.id).startsWith("demo-")}><option value="">{isDemo || String(application.id).startsWith("demo-") ? "Sample status · read only" : "Update status"}</option>{allowed.map((status) => <option value={status} key={status}>{transitionLabel[status]}</option>)}</select>}{application.opportunity_id && !String(application.opportunity_id).startsWith("demo-") && <Link href={`/opportunities/${application.opportunity_id}`} className="icon-link" aria-label="View opportunity"><ArrowUpRight size={16} /></Link>}</div>
-        {!isDemo && !String(application.id).startsWith("demo-") && (
+        <div className="tracker-actions"><span className="badge badge-neutral">{APPLICATION_STATUS_LABELS[application.status] || application.status}</span>{allowed.length > 0 && <label className="sr-only" htmlFor={`status-${application.id}`}>Update status for {application.opportunity?.title || "this application"}</label>}{allowed.length > 0 && <select id={`status-${application.id}`} className="status-select" value="" onChange={(event) => event.target.value && updateStatus(application, event.target.value)} disabled={updating === application.id || String(application.id).startsWith("demo-")}><option value="">{String(application.id).startsWith("demo-") ? "Sample status · read only" : "Update status"}</option>{allowed.map((status) => <option value={status} key={status}>{transitionLabel[status]}</option>)}</select>}{application.opportunity_id && !String(application.opportunity_id).startsWith("demo-") && <Link href={`/opportunities/${application.opportunity_id}`} className="icon-link" aria-label="View opportunity"><ArrowUpRight size={16} /></Link>}</div>
+        {!String(application.id).startsWith("demo-") && (
           <div className="full-span">
             {application.status === "SAVED" && <button className="button button-secondary" disabled={updating === application.id} onClick={() => updateStatus(application, "DRAFT")}>Prepare application</button>}
             {application.status === "DRAFT" && <><label>Application statement<textarea className="form-control" value={materials[application.id] ?? application.material?.statement ?? ""} onChange={(event) => setMaterials((current) => ({ ...current, [application.id]: event.target.value }))} /></label><button className="button button-secondary" disabled={updating === application.id} onClick={() => act(application, "save")}>Save materials</button><button className="button button-primary" disabled={updating === application.id || (materials[application.id] !== undefined && materials[application.id] !== (application.material?.statement ?? ""))} onClick={() => updateStatus(application, "READY_FOR_REVIEW")}>Review saved materials</button></>}

@@ -12,8 +12,6 @@ import { api } from "@/services/api";
 import { useAuth } from "@/hooks/useAuth";
 import ThemeToggle from "@/components/ThemeToggle";
 import BrandLogo from "@/components/BrandLogo";
-import DemoNotice from "@/components/DemoNotice";
-import { demoOpportunities } from "@/utils/demo-data";
 
 const featuredCategories = [
   { title: "Scholarships", category: "scholarship", Icon: GraduationCap, tone: "peach" },
@@ -100,18 +98,17 @@ const formatDate = (value) => {
 
 export default function LandingPage() {
   const { user, loading: authLoading } = useAuth();
-  const [featured, setFeatured] = useState(demoOpportunities);
+  const [featured, setFeatured] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [isDemo, setIsDemo] = useState(true);
 
   useEffect(() => {
     if (authLoading) return undefined;
     if (!user) { setLoading(false); return undefined; }
     let active = true;
     api.opportunities({ limit: 4, offset: 0 })
-      .then((result) => { if (active) { setFeatured(Array.isArray(result.items) ? result.items : []); setIsDemo(false); } })
-      .catch((error) => { if (active) { setLoadError(error.message); setIsDemo(true); } })
+      .then((result) => { if (active) setFeatured(Array.isArray(result.items) ? result.items : []); })
+      .catch((error) => { if (active) setLoadError(error.message); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [authLoading, user]);
@@ -172,8 +169,7 @@ export default function LandingPage() {
 
         <section className="landing-opportunities content-wrap" id="opportunities">
           <div className="showcase-heading"><div><span className="section-kicker">DISCOVER WHAT’S OPEN</span><h2>Opportunities worth a look</h2></div><Link href="/opportunities" className="showcase-link">Explore opportunities <ArrowRight size={17} /></Link></div>
-          {isDemo && <DemoNotice>{loadError ? "Live listings could not be reached; explore these fictional examples." : "Explore a few fictional listings while you preview AVSAR."}</DemoNotice>}
-          {!isDemo && loading && <p className="form-feedback" role="status">Refreshing live listings…</p>}
+          {loading && <p className="form-feedback" role="status">Refreshing live listings…</p>}
           {featured.length ? <div className="opportunity-grid">
             {featured.map((item) => <article className="opportunity-card" key={item.id}><div className="card-topline"><span className="card-category-icon"><GraduationCap size={19} /></span><span className="category-label">{CATEGORY_LABELS[item.category] || item.category}</span></div><h3 className="opportunity-title">{item.title}</h3><p className="organization-name">{item.organization || item.provider || "Organization not listed"}</p><div className="opportunity-meta"><span>{item.remote === true ? "Online" : item.remote === false ? "On-site" : "Mode not listed"}</span><span>{formatDate(item.deadline)}</span></div><div className="card-footer"><span className="deadline-label">{item.stipend == null ? "Details on source page" : `${item.stipend} stipend`}</span><Link className="text-link" href={`/opportunities/${encodeURIComponent(item.id)}`}>View details <ArrowUpRight size={15} /></Link></div></article>)}
           </div> : <div className="opportunities-prompt"><span className="prompt-icon"><BookmarkCheck size={22} /></span><div><strong>{user ? "No opportunities available yet" : "Sign in to save opportunities"}</strong><p>{user ? "New listings will appear here as they become available." : "Create your profile to save listings, check eligibility and track deadlines."}</p></div><Link href={user ? "/opportunities" : "/signup"} className="text-link">{user ? "Browse all opportunities" : "Get started"} <ArrowRight size={15} /></Link></div>}

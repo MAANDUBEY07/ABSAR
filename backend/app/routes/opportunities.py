@@ -19,18 +19,51 @@ def insert_opportunity(body: OpportunityInput, owner: Owner):
 
 @router.get("/opportunities/{record_id}")
 def get_opportunity(record_id: str, owner: Owner):
-    if record_id.startswith("live_"):
-        live = category_sources.get_listing(record_id)
-        if live:
-            return ok(live)
-    if record_id.startswith("arbeitnow_"):
+    from app.services.source_intelligence import enrich_opportunity
+
+    existing = documents.get("opportunities", record_id)
+    if existing and existing.get("source_summary") and existing.get("requirements", {}).get("confirmed"):
+        return ok(existing)
+
+    opp = existing
+    if not opp and record_id.startswith("live_"):
+        opp = category_sources.get_listing(record_id)
+    elif not opp and record_id.startswith("arbeitnow_"):
         try:
-            live = arbeitnow.get_listing(record_id)
+            opp = arbeitnow.get_listing(record_id)
         except (OSError, ValueError):
-            live = None
-        if live:
-            return ok(live)
-    return ok(opportunity(record_id))
+            opp = None
+
+    if not opp:
+        opp = opportunity(record_id)
+
+    if opp:
+        opp = enrich_opportunity(opp)
+    return ok(opp)
+
+
+@router.post("/opportunities/{record_id}/refresh-source")
+def refresh_opportunity_source(
+    record_id: str,
+    owner: Owner,
+    body: dict | None = None,
+):
+    from app.services.source_intelligence import enrich_opportunity
+
+    opp = documents.get("opportunities", record_id)
+    if not opp and record_id.startswith("live_"):
+        opp = category_sources.get_listing(record_id)
+    elif not opp and record_id.startswith("arbeitnow_"):
+        try:
+            opp = arbeitnow.get_listing(record_id)
+        except (OSError, ValueError):
+            opp = None
+    if not opp:
+        opp = opportunity(record_id)
+
+    user_desc = (body or {}).get("user_description")
+    enriched = enrich_opportunity(opp, user_description=user_desc, force_refresh=True)
+    return ok(enriched)
 
 
 @router.get("/opportunities")

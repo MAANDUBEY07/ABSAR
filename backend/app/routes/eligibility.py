@@ -5,7 +5,7 @@ from app.models.profile import Profile
 from app.models.opportunity import Saved
 from app.repositories.relational import owned
 from app.repositories import documents
-from app.schemas.eligibility import MatchInput, EligibilityBatch
+from app.schemas.eligibility import MatchInput, EligibilityBatch, CheckEligibilityInput
 from app.schemas.opportunity import Feedback
 from app.services.catalog import opportunity
 from app.services.matching import match, is_open
@@ -87,12 +87,30 @@ def feedback(body: Feedback, owner: Owner, db: DB):
 
 
 @router.post("/eligibility/check/{opportunity_id}")
-def check_eligibility(opportunity_id: str, owner: Owner, db: DB):
+def check_eligibility(
+    opportunity_id: str,
+    owner: Owner,
+    db: DB,
+    body: CheckEligibilityInput | None = None,
+):
     from app.services.eligibility_adapter import evaluate_opportunity
+    from app.services.source_intelligence import enrich_opportunity
 
-    return ok(
-        evaluate_opportunity(owned(db, Profile, owner, owner).payload, opportunity(opportunity_id))
-    )
+    user_profile = owned(db, Profile, owner, owner).payload
+    opp = documents.get("opportunities", opportunity_id)
+    if not opp:
+        opp = opportunity(opportunity_id)
+
+    force_refresh = bool(body and body.force_refresh)
+    user_desc = body.user_description if body else None
+
+    # Priority 2: Complete workflow - if criteria unconfirmed, or stale, or force_refresh,
+    # or user supplied manual description, invoke source extraction workflow before evaluating.
+    if not opp.get("requirements", {}).get("confirmed") or force_refresh or user_desc:
+        opp = enrich_opportunity(opp, user_description=user_desc, force_refresh=force_refresh)
+
+    eval_result = evaluate_opportunity(user_profile, opp)
+    return ok(eval_result)
 
 
 @router.post("/eligibility/batch")

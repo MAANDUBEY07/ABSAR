@@ -9,6 +9,11 @@ class MatchInput(Input):
     opportunity_id: str
 
 
+class CheckEligibilityInput(Input):
+    user_description: str | None = None
+    force_refresh: bool = False
+
+
 class EligibilityBatch(Input):
     opportunity_ids: list[str] = Field(min_length=1, max_length=50)
 
@@ -31,3 +36,6 @@ class EligibilityEvaluationResponse(Input):
     passed_criteria: list[dict]
     failed_criteria: list[dict]
     missing_criteria: list[dict]
+    source_summary: dict | None = None
+    requirements: dict | None = None
+    evidence: dict | None = None

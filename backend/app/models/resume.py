@@ -34,9 +34,16 @@ class ResumeAnalysis(BaseModel):
     skills: list[str]
     evidence: list[SkillClaim]
     parsed_skills: list[str] | None = None
+    technical_skills: list[str] | None = None
+    soft_skills: list[str] | None = None
+    languages: list[dict] | None = None
     experience_years: float | None = Field(None, ge=0)
     education: list[dict] | None = None
     readiness_score: float | None = Field(None, ge=0, le=100)
+    readiness_breakdown: dict | None = None
     recommendations: list[str] | None = None
     warnings: list[str] = Field(default_factory=list)
     disclaimer: str
+    projects: list[dict] | None = None
+    certifications: list[dict] | None = None
+    publications: list[dict] | None = None

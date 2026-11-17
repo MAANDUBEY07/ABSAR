@@ -258,6 +258,236 @@ class TestResumeAnalyzerService(unittest.TestCase):
         self.assertEqual(validated_kw.document_id, "doc_kw_101")
         self.assertIn("python", validated_kw.skills)
 
+    def test_michael_adams_resume_accuracy_extraction(self):
+        """Regression test for Michael Adams resume:
+
+        Verifies accurate experience calculation (capped at current year, future dated flagged),
+        proper degree, institution, and GPA extraction, separation of soft skills from technical skills,
+        language extraction, and readiness breakdown without extra="forbid" schema violations.
+        """
+        fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "michael_adams_resume.pdf")
+        if os.path.exists(fixture_path):
+            with open(fixture_path, "rb") as f:
+                pdf_bytes = f.read()
+            from app.services.resume_analyzer import extract_text_from_pdf_bytes
+            resume_text = extract_text_from_pdf_bytes(pdf_bytes)
+        else:
+            resume_text = (
+                "MICHAEL ADAMS\nGRAPHIC DESIGNER\n"
+                "WORK EXPERIENCE\n"
+                "2030 - PRESENT\nBorcelle Studio\nMarketing Manager & Specialist\n"
+                "2025 - 2029\nFauget Studio\nMarketing Manager & Specialist\n"
+                "2024 - 2025\nStudio Shodwe\nMarketing Manager & Specialist\n"
+                "Lead, mentor, and manage a high-performing marketing team, promoting teamwork.\n"
+                "EDUCATION\n"
+                "WARDIERE UNIVERSITY\nMaster of Business Management\n2029 - 2030\n"
+                "WARDIERE UNIVERSITY\nBachelor of Business\n2025 - 2029\nGPA: 3.8 / 4.0\n"
+                "SKILLS\n"
+                "Project Management\nPublic Relations\nTeamwork\nTime Management\n"
+                "Leadership\nEffective Communication\nCritical Thinking\n"
+                "LANGUAGES\n"
+                "English (Fluent)\nFrench (Fluent)\nGerman (Basics)\nSpanish (Intermediate)\n"
+                "CONTACT\n+123-456-7890\nhello@reallygreatsite.com\n123 Anywhere St."
+            )
+
+        result = analyze_resume(resume_text, owner_id="usr_michael", document_id="doc_adams")
+
+        # 1. Experience years: must be capped at 2.0 completed years, NOT 19.5!
+        self.assertEqual(result.experience_years, 2.0)
+        self.assertTrue(
+            any("Future-dated" in w for w in result.get("warnings", [])),
+            "Expected warning for 2030 - PRESENT future employment entry",
+        )
+
+        # 2. Education: Master of Business Management and Bachelor of Business with Wardiere University & GPA
+        self.assertEqual(len(result.education), 2)
+        degrees = [e["degree"] for e in result.education]
+        self.assertIn("Master of Business Management", degrees)
+        self.assertIn("Bachelor of Business", degrees)
+        for edu in result.education:
+            self.assertEqual(edu["institution"], "Wardiere University")
+        bachelor = next(e for e in result.education if e["degree"] == "Bachelor of Business")
+        self.assertEqual(bachelor["gpa"], "3.8 / 4.0")
+
+        # 3. Soft Skills: All 7 skills identified, not classified as technical
+        expected_soft = {
+            "project management",
+            "public relations",
+            "teamwork",
+            "time management",
+            "leadership",
+            "effective communication",
+            "critical thinking",
+        }
+        self.assertTrue(expected_soft.issubset(set(result.get("soft_skills", []))))
+        self.assertEqual(result.get("technical_skills", []), [])
+
+        # 4. Languages extracted
+        languages = {l["language"]: l["proficiency"] for l in result.get("languages", [])}
+        self.assertEqual(languages.get("English"), "Fluent")
+        self.assertEqual(languages.get("French"), "Fluent")
+        self.assertEqual(languages.get("German"), "Basic")
+        self.assertEqual(languages.get("Spanish"), "Intermediate")
+
+        # 5. Readiness breakdown
+        breakdown = result.get("readiness_breakdown")
+        self.assertIsNotNone(breakdown)
+        self.assertEqual(breakdown["score_type"], "RESUME_COMPLETENESS")
+        self.assertEqual(breakdown["total_score"], 80.0)
+        self.assertEqual(result.readiness_score, 80.0)
+
+        # 6. Strict validation against Member 2 Pydantic schema
+        validated = ResumeAnalysis.model_validate(result)
+        self.assertEqual(validated.owner_id, "usr_michael")
+        self.assertEqual(validated.document_id, "doc_adams")
+
+    def test_aarav_sharma_resume_accuracy_extraction(self):
+        """Regression test for Aarav Sharma resume:
+
+        Verifies extraction of all 30+ technical skills from grouped headings,
+        accurate education (IIIT Sri City, 2018-2022, CGPA 8.84),
+        projects, certifications, publications, 4.0 years experience,
+        100% readiness completeness with transparent breakdown,
+        and strict validation against Member 2 Pydantic schema with extra='forbid'.
+        """
+        fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "Aarav_Sharma_Data_Scientist_CV.pdf")
+        if os.path.exists(fixture_path):
+            with open(fixture_path, "rb") as f:
+                pdf_bytes = f.read()
+            from app.services.resume_analyzer import extract_text_from_pdf_bytes
+            resume_text = extract_text_from_pdf_bytes(pdf_bytes)
+        else:
+            resume_text = (
+                "Aarav Sharma\nSenior Data Scientist\n"
+                "Bengaluru, Karnataka, India | +91 98765 43210 | aarav.sharma.ds@email.com\n"
+                "LinkedIn: linkedin.com/in/aaravsharma-ds | GitHub: github.com/aaravsharma-ml\n"
+                "PROFESSIONAL SUMMARY\n"
+                "Data Scientist with 4+ years of experience designing, validating, and deploying end-to-end machine learning pipelines.\n"
+                "TECHNICAL SKILLS\n"
+                "Languages Python, SQL (PostgreSQL, BigQuery), R, Bash\n"
+                "Machine Learning & AI Scikit-Learn, XGBoost, LightGBM, PyTorch, TensorFlow, Hugging Face Transformers\n"
+                "Data Engineering Pandas, NumPy, PySpark, Apache Airflow, dbt\n"
+                "MLOps & Cloud Docker, Kubernetes, AWS (SageMaker, S3, EC2), MLflow, FastAPI, Git\n"
+                "Experimentation & BI A/B Testing, Causal Inference, Bayesian Statistics, Tableau, Matplotlib, Seaborn\n"
+                "WORK EXPERIENCE\n"
+                "Senior Data Scientist | FinPulse Technologies, Bengaluru July 2024 – Present\n"
+                "Data Scientist | CartWave Retail Analytics, Bengaluru June 2022 – June 2024\n"
+                "Data Science Intern | QuantEdge Solutions, Hyderabad January 2022 – May 2022\n"
+                "SELECTED PROJECTS\n"
+                "Real-Time Fraud Detection Engine PyTorch, Isolation Forests, FastAPI\n"
+                "Dynamic Surge Pricing Simulator HDBSCAN, Gradient Boosting, Python\n"
+                "EDUCATION\n"
+                "B.Tech in Computer Science & Engineering (Data Science) 2018 – 2022\n"
+                "Indian Institute of Information Technology (IIIT), Sri City | CGPA: 8.84 / 10.0\n"
+                "CERTIFICATIONS & PUBLICATIONS\n"
+                "AWS Certified Machine Learning – Specialty (Issued 2024)\n"
+                "Co-Author: \"Handling Concept Drift in High-Frequency Tabular Streams\" — IEEE International Conference on Data Mining Workshops (2023)\n"
+            )
+
+        result = analyze_resume(resume_text, owner_id="usr_aarav", document_id="doc_aarav")
+
+        # 1. Experience years: 4.0 years
+        self.assertEqual(result.experience_years, 4.0)
+
+        # 2. Education: B.Tech, IIIT Sri City, 2022, CGPA 8.84 / 10.0
+        self.assertGreaterEqual(len(result.education), 1)
+        edu = result.education[0]
+        self.assertEqual(edu["degree"], "B.Tech")
+        self.assertIn("Computer Science", edu["field"])
+        self.assertIn("Indian Institute of Information Technology", edu["institution"])
+        self.assertIn("Sri City", edu["institution"])
+        self.assertEqual(edu["graduation_year"], 2022)
+        self.assertEqual(edu["gpa"], "8.84 / 10.0")
+
+        # 3. Technical Skills: All expected technical skills extracted
+        expected_tech = {
+            "python", "sql", "postgresql", "bigquery", "r", "bash",
+            "scikit-learn", "xgboost", "lightgbm", "pytorch", "tensorflow",
+            "hugging face transformers", "pandas", "numpy", "pyspark", "apache airflow", "dbt",
+            "docker", "kubernetes", "aws sagemaker", "s3", "ec2", "mlflow", "fastapi", "git",
+            "a/b testing", "causal inference", "bayesian statistics", "tableau", "matplotlib", "seaborn",
+        }
+        extracted_tech = set(result.get("technical_skills", []))
+        self.assertTrue(expected_tech.issubset(extracted_tech), f"Missing tech skills: {expected_tech - extracted_tech}")
+        self.assertIn("parsed_skills", result)
+        self.assertTrue(expected_tech.issubset(set(result.skills)))
+
+        # 4. Structured projects, certifications and publications
+        self.assertEqual(len(result.get("projects", [])), 2)
+        proj_names = [p["name"] for p in result["projects"]]
+        self.assertIn("Real-Time Fraud Detection Engine", proj_names)
+        self.assertIn("Dynamic Surge Pricing Simulator", proj_names)
+
+        self.assertGreaterEqual(len(result.get("certifications", [])), 1)
+        self.assertTrue(any("AWS Certified Machine Learning" in c["name"] for c in result["certifications"]))
+
+        self.assertGreaterEqual(len(result.get("publications", [])), 1)
+        pub = result["publications"][0]
+        self.assertIn("Handling Concept Drift", pub["title"])
+        self.assertIn("IEEE", pub.get("venue", ""))
+
+        # 5. Transparent 100% profile completeness score breakdown
+        breakdown = result.get("readiness_breakdown")
+        self.assertIsNotNone(breakdown)
+        self.assertEqual(breakdown["score_type"], "RESUME_COMPLETENESS")
+        self.assertEqual(breakdown["contact_score"], 10.0)
+        self.assertEqual(breakdown["education_score"], 25.0)
+        self.assertEqual(breakdown["experience_score"], 25.0)
+        self.assertEqual(breakdown["technical_skills_score"], 20.0)
+        self.assertEqual(breakdown["soft_skills_and_languages_score"], 20.0)
+        self.assertEqual(breakdown["total_score"], 100.0)
+        self.assertEqual(result.readiness_score, 100.0)
+
+        # 6. Strict validation against Member 2 Pydantic schema
+        validated = ResumeAnalysis.model_validate(result)
+        self.assertEqual(validated.owner_id, "usr_aarav")
+        self.assertEqual(validated.document_id, "doc_aarav")
+        self.assertTrue(expected_tech.issubset(set(validated.skills)))
+        self.assertEqual(len(validated.projects), 2)
+        self.assertEqual(len(validated.certifications), 1)
+        self.assertEqual(len(validated.publications), 1)
+
+    def test_opportunity_matching_fallback_and_missing_criteria(self):
+        """Verify opportunity matching falls back to tags/descriptions when requirements
+
+        are unconfirmed, and sets criteria_available=False when no criteria exist.
+        """
+        from app.services.matching import compare_skills
+
+        candidate_skills = [
+            "critical thinking",
+            "effective communication",
+            "leadership",
+            "project management",
+        ]
+
+        # Scenario A: Live job with tags but unconfirmed requirements
+        react_opp = {
+            "id": "live_arbeitnow_frontend",
+            "title": "Senior Frontend Engineer – React",
+            "category_metadata": {"tags": ["React", "JavaScript", "TypeScript"]},
+            "requirements": {"confirmed": False},
+        }
+        match_a = compare_skills(candidate_skills, react_opp.get("requirements"), opportunity=react_opp)
+        self.assertTrue(match_a["criteria_available"])
+        self.assertFalse(match_a["has_missing_opportunity_criteria"])
+        self.assertIn("react", match_a["missing_required"])
+        self.assertIn("javascript", match_a["missing_required"])
+        self.assertEqual(match_a["matched_required"], [])
+        self.assertEqual(match_a["score"], 0.0)
+
+        # Scenario B: Opportunity with no criteria anywhere
+        blank_opp = {
+            "id": "opp_blank",
+            "title": "General Contributor",
+            "description": "General open role",
+            "requirements": {},
+        }
+        match_b = compare_skills(candidate_skills, blank_opp.get("requirements"), opportunity=blank_opp)
+        self.assertFalse(match_b["criteria_available"])
+        self.assertTrue(match_b["has_missing_opportunity_criteria"])
+        self.assertIsNone(match_b["score"])
+
 
 if __name__ == "__main__":
     unittest.main()
