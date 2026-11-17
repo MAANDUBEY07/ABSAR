@@ -211,5 +211,10 @@ def listings(category):
 
 
 def get_listing(record_id):
+    from app.services import india_sources
+
+    indian = india_sources.get_listing(record_id)
+    if indian:
+        return indian
     category = record_id.removeprefix("live_").split("__", 1)[0]
     return next((row for row in listings(category) if row["id"] == record_id), None)
