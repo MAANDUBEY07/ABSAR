@@ -343,13 +343,31 @@
             "schema": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "type": "string",
+                  "maxLength": 200
                 },
                 {
                   "type": "null"
                 }
               ],
               "title": "State"
+            }
+          },
+          {
+            "name": "location",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Location"
             }
           },
           {
@@ -367,6 +385,27 @@
                 }
               ],
               "title": "Search"
+            }
+          },
+          {
+            "name": "opportunity_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "online",
+                    "offline",
+                    "hybrid"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Opportunity Mode"
             }
           }
         ],

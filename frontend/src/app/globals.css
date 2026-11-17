@@ -210,6 +210,12 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 
 .protected-loading { min-height: 100vh; display: grid; place-content: center; justify-items: center; gap: 8px; color: var(--muted); }
 .filter-select .filter-location { min-width: 130px; width: 100%; border: 0; outline: 0; color: #43624d; background: transparent; font: inherit; font-size: 10px; }
+.opportunity-filters { flex-wrap: wrap; }
+.opportunity-filters .searchbar { flex: 2 1 300px; }
+.opportunity-filters .filter-select { flex: 1 1 165px; min-width: 0; }
+@media (max-width: 700px) {
+  .opportunity-filters .searchbar, .opportunity-filters .filter-select { flex: auto; }
+}
 .dashboard-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: start; }
 .dashboard-columns .content-section { min-width: 0; }
 .empty-state.compact { min-height: 130px; padding: 17px; }

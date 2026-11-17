@@ -5,6 +5,7 @@ from fastapi import Query
 from app.schemas.opportunity import OpportunityInput
 from app.services.catalog import opportunity, create_opportunity
 from app.services import arbeitnow, category_sources
+from app.services.location_filter import matches_location
 from pymongo.errors import PyMongoError
 from sqlalchemy.exc import SQLAlchemyError
 from typing import Literal
@@ -79,7 +80,8 @@ def list_opportunities(
     limit: Limit = 20,
     offset: Offset = 0,
     category: str | None = None,
-    state: str | None = None,
+    state: str | None = Query(None, max_length=200),
+    location: str | None = Query(None, max_length=200),
     search: str | None = Query(None, max_length=300),
     opportunity_mode: Literal["online", "offline", "hybrid"] | None = None,
 ):
@@ -114,7 +116,7 @@ def list_opportunities(
     for record in candidates:
         if category and record.get("category") != category:
             continue
-        if state and state.strip().casefold() not in str(record.get("location") or "").casefold():
+        if not matches_location(record, state) or not matches_location(record, location):
             continue
         record_mode = record.get("opportunity_mode")
         if record_mode is None and record.get("remote") is True:
