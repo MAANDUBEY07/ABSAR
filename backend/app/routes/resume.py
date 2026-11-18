@@ -103,6 +103,34 @@ def match_top_opportunities(owner: Owner, body: dict | None = None):
         raise HTTPException(404, "No resume analysis available. Please upload a resume first.")
 
     candidate_skills = analysis.get("skills") or analysis.get("parsed_skills") or []
+    tech_skills = analysis.get("technical_skills") or []
+    has_tech_skills = len(tech_skills) > 0
+
+    # Safe early-exit if candidate has no extracted skills at all
+    if not candidate_skills:
+        raw_opps = []
+        try:
+            raw_opps.extend(documents.scan("opportunities", limit=3))
+        except Exception:
+            pass
+        return ok([
+            {
+                "opportunity_id": opp["id"],
+                "title": opp.get("title") or "Opportunity",
+                "organization": opp.get("organization") or opp.get("company_name") or "Employer / Sponsor",
+                "category": opp.get("category") or "opportunity",
+                "location": opp.get("location") or "Remote / Unspecified",
+                "match_percentage": None,
+                "criteria_available": False,
+                "matched_skills": [],
+                "missing_skills": [],
+                "reasons": [
+                    "Resume contains no extracted skills; technical-skill matching cannot be meaningfully calculated."
+                ],
+                "detail_url": f"/opportunities/{opp['id']}",
+            }
+            for opp in raw_opps
+        ])
 
     from app.services import arbeitnow
     raw_opps = []
@@ -135,7 +163,20 @@ def match_top_opportunities(owner: Owner, body: dict | None = None):
             reasons.append(f"Matched {len(matched)} relevant skill(s): {', '.join(matched[:4])}")
         if missing:
             reasons.append(f"Missing {len(missing)} requirement(s): {', '.join(missing[:3])}")
-        if not has_criteria:
+
+        # Truthful result when candidate has no comparable technical skills
+        if not has_tech_skills:
+            if not matched:
+                has_criteria = False
+                score = None
+                reasons.append(
+                    "Candidate profile contains no comparable technical skills; technical-skill matching cannot be meaningfully calculated."
+                )
+            else:
+                reasons.append(
+                    "Matched on non-technical competencies; technical skills are unlisted in resume."
+                )
+        elif not has_criteria:
             reasons.append(
                 "Opportunity does not publish structured skill requirements; criteria cannot be evaluated."
             )

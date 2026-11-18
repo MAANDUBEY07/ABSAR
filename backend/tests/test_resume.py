@@ -601,6 +601,48 @@ class TestResumeAnalyzerService(unittest.TestCase):
         # Languages
         self.assertEqual(len(result["languages"]), 4)
 
+    def test_zero_technical_skills_opportunity_matching_safe_handling(self):
+        """Verify that candidates with zero technical skills are handled truthfully without
+
+        fabricating scores, claiming ineligibility, or timing out. Non-technical matching is preserved.
+        """
+        from app.routes.resume import match_top_opportunities
+        from app.repositories import documents
+
+        owner = "test-zero-tech-owner"
+        # Save a synthetic analysis with 0 technical skills and 3 soft skills (Michael Adams archetype)
+        analysis_payload = {
+            "id": "doc-zero-tech-1",
+            "candidate": {"name": "Michael Adams", "title": "Graphic Designer"},
+            "technical_skills": [],
+            "soft_skills": ["project management", "leadership", "effective communication"],
+            "skills": ["project management", "leadership", "effective communication"],
+            "owner_id": owner,
+            "_updated_at": "2026-11-18T10:00:00Z",
+        }
+        documents.put("skill_analysis", "doc-zero-tech-1", analysis_payload)
+
+        resp = match_top_opportunities(owner=owner, body={"document_id": "doc-zero-tech-1"})
+        self.assertIn("data", resp)
+        top_matches = resp["data"]
+        self.assertLessEqual(len(top_matches), 3)
+
+        for match in top_matches:
+            # Must have valid opportunity contract
+            self.assertIn("opportunity_id", match)
+            self.assertIn("title", match)
+            self.assertIn("matched_skills", match)
+            self.assertIn("reasons", match)
+
+            # If matched on soft skills, non-technical matching is preserved
+            if match["matched_skills"]:
+                self.assertTrue(any("Matched on non-technical competencies" in r for r in match["reasons"]))
+            else:
+                # If no skills matched, score must not be fabricated
+                self.assertIsNone(match["match_percentage"])
+                self.assertFalse(match["criteria_available"])
+                self.assertTrue(any("no comparable technical skills" in r for r in match["reasons"]))
+
 
 if __name__ == "__main__":
     unittest.main()

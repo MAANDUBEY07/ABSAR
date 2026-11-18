@@ -30,21 +30,30 @@ def compare_skills(skills, requirements=None, *, opportunity=None):
 
     # Fallback to opportunity metadata if required_skills is empty/unconfirmed
     if not required and opportunity:
-        tags = opportunity.get("category_metadata", {}).get("tags", [])
-        extracted_from_tags = set()
-        if isinstance(tags, list):
-            norm_tags = normalized([t for t in tags if isinstance(t, str)])
-            if norm_tags:
-                extracted_from_tags = norm_tags
+        cached_req = opportunity.get("_extracted_skills")
+        if cached_req is not None:
+            required = cached_req
+        else:
+            tags = opportunity.get("category_metadata", {}).get("tags", [])
+            extracted_from_tags = set()
+            if isinstance(tags, list):
+                norm_tags = normalized([t for t in tags if isinstance(t, str)])
+                if norm_tags:
+                    extracted_from_tags = norm_tags
 
-        from app.services.resume_analyzer import extract_skills
+            # If tags exist, use them directly to avoid expensive regex scanning over descriptions
+            if extracted_from_tags:
+                required = extracted_from_tags
+            else:
+                from app.services.resume_analyzer import extract_skills
 
-        text_context = f"{opportunity.get('title', '')} {opportunity.get('description', '')}"
-        extracted_opp_skills = normalized(extract_skills(text_context))
+                # Truncate text context to prevent running full taxonomy regexes over huge descriptions
+                text_context = f"{opportunity.get('title', '')} {(opportunity.get('description') or '')[:1200]}"
+                extracted_opp_skills = normalized(extract_skills(text_context))
+                if extracted_opp_skills:
+                    required = extracted_opp_skills
 
-        combined = extracted_from_tags | extracted_opp_skills
-        if combined:
-            required = combined
+            opportunity["_extracted_skills"] = required
 
     criteria_available = bool(required or preferred)
     has_missing_opportunity_criteria = not criteria_available
